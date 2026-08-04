@@ -1,0 +1,722 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fraud Pattern Radar</title>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+  :root{
+    --bg:#0d1117; --panel:#161b22; --line:#30363d; --ink:#e6edf3; --muted:#8b949e;
+    --low:#2ea043; --elevated:#d29922; --high:#db6d28; --siu:#f85149; --accent:#58a6ff;
+    --card:#0f141b; --input:#0d1117;
+  }
+  :root[data-theme="light"]{
+    --bg:#f6f8fa; --panel:#ffffff; --line:#d0d7de; --ink:#1f2328; --muted:#57606a;
+    --accent:#0969da; --card:#f0f3f6; --input:#ffffff;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font:14px/1.5 -apple-system,Segoe UI,Roboto,sans-serif;background:var(--bg);color:var(--ink)}
+  header{display:flex;align-items:center;gap:16px;padding:14px 20px;border-bottom:1px solid var(--line);background:var(--panel)}
+  header h1{font-size:18px;margin:0;letter-spacing:.3px}
+  header .tag{color:var(--muted);font-size:12px}
+  #status{margin-left:auto;font-size:12px;color:var(--muted)}
+  main{display:grid;grid-template-columns:300px 1fr 380px;gap:0;height:calc(100vh - 53px)}
+  .col{overflow-y:auto;padding:14px;border-right:1px solid var(--line)}
+  .col:last-child{border-right:none}
+  h2{font-size:12px;text-transform:uppercase;letter-spacing:.8px;color:var(--muted);margin:0 0 10px}
+  .claim{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;cursor:pointer;background:var(--card);transition:.12s}
+  .claim:hover{border-color:var(--accent)}
+  .claim.active{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+  .claim .top{display:flex;justify-content:space-between;align-items:center}
+  .claim .cid{font-weight:600}
+  .claim .meta{color:var(--muted);font-size:12px}
+  .badge{font-size:11px;font-weight:700;padding:2px 8px;border-radius:20px;color:#0d1117}
+  .b-low{background:var(--low)} .b-medium{background:var(--elevated)}
+  .b-high{background:var(--siu)}
+  .ring{display:inline-block;font-size:10px;color:var(--siu);border:1px solid var(--siu);border-radius:4px;padding:0 5px;margin-left:6px}
+  #graph{height:100%;width:100%}
+  .center{position:relative}
+  #zoomctl{position:absolute;right:14px;bottom:14px;display:flex;flex-direction:column;gap:6px;z-index:5}
+  #zoomctl button{width:34px;height:34px;border-radius:8px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);font-size:17px;font-weight:700;cursor:pointer;line-height:1;box-shadow:0 2px 8px rgba(0,0,0,.28)}
+  #zoomctl button:hover{border-color:var(--accent);color:var(--accent)}
+  .center{display:flex;flex-direction:column;padding:0}
+  .center .bar{padding:10px 14px;border-bottom:1px solid var(--line);display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+  .legend{display:flex;gap:12px;font-size:12px;color:var(--muted);align-items:center;flex-wrap:wrap}
+  .dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:middle}
+  #detail .score-hero{display:flex;align-items:baseline;gap:10px;margin-bottom:6px}
+  #detail .score-hero .n{font-size:34px;font-weight:800}
+  .narr{background:var(--card);border:1px solid var(--line);border-left:3px solid var(--accent);border-radius:6px;padding:10px 12px;margin:12px 0;color:var(--ink)}
+  .rule{border:1px solid var(--line);border-radius:6px;padding:8px 10px;margin-bottom:7px;background:var(--card)}
+  .rule .rh{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+  .rule .rid{font-weight:700;color:var(--accent)}
+  .rule .pts{font-size:12px;color:var(--siu);font-weight:700}
+  .rule .cat{font-size:11px;color:var(--muted)}
+  .rule .rsn{font-size:13px;color:var(--ink)}
+  .empty{color:var(--muted);padding:20px;text-align:center}
+  a{color:var(--accent)}
+  .btn{background:var(--accent);color:#0d1117;border:none;border-radius:6px;padding:7px 12px;font-weight:700;cursor:pointer;font-size:13px}
+  .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--line)}
+  .btn:hover{filter:brightness(1.1)}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:50}
+  .modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:20px;width:600px;max-width:92vw;max-height:90vh;overflow:auto;box-shadow:0 20px 60px rgba(0,0,0,.5)}
+  .modal h2{margin-top:0}
+  .presets{display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap}
+  .chip{background:var(--card);border:1px solid var(--line);color:var(--ink);border-radius:20px;padding:5px 12px;cursor:pointer;font-size:12px}
+  .chip:hover{border-color:var(--accent)}
+  #fnolJson{width:100%;height:300px;background:var(--input);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:12px/1.5 ui-monospace,Menlo,monospace;resize:vertical}
+  .modal-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:12px}
+  .err{color:var(--siu);font-size:12px;min-height:16px;margin-top:6px}
+  .fnol-tag{display:inline-block;font-size:10px;color:var(--accent);border:1px solid var(--accent);border-radius:4px;padding:0 5px;margin-left:6px}
+  header{flex-wrap:wrap}
+  a.btn{text-decoration:none;display:inline-flex;align-items:center}
+  .modal.wide{width:880px}
+  .rcat{margin:16px 0 6px;color:var(--muted);font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700}
+  .rcat:first-child{margin-top:4px}
+  .rrow{border:1px solid var(--line);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:var(--card)}
+  .rrow .rh{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+  .rrow .rid{font-weight:800;color:var(--accent)}
+  .rrow .rpts{font-size:12px;color:var(--siu);font-weight:700}
+  .rrow .rname{font-weight:600}
+  .rfire{margin-left:auto;font-size:11px;font-weight:700;border-radius:20px;padding:2px 10px}
+  .rfire.on{background:rgba(248,81,73,.16);color:#ff7b72;border:1px solid rgba(248,81,73,.45)}
+  .rfire.off{background:var(--card);color:var(--muted);border:1px solid var(--line)}
+  .rrow .rdesc{font-size:12.5px;color:var(--muted);margin-top:5px}
+  .rrow .rclaims{margin-top:7px;display:flex;gap:6px;flex-wrap:wrap}
+  .rchip{font-size:11px;border:1px solid var(--line);border-radius:5px;padding:1px 7px;cursor:pointer;color:var(--ink);background:var(--input)}
+  .rchip:hover{border-color:var(--accent)}
+  .rrow .rex{font-size:12px;color:var(--muted);margin-top:7px;font-style:italic}
+  .rules-summary{color:var(--muted);font-size:12px;margin-bottom:4px}
+  .qhead{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+  .qsortwrap{display:flex;border:1px solid var(--line);border-radius:7px;overflow:hidden}
+  .qsort{background:transparent;color:var(--muted);border:none;padding:4px 9px;font-size:11px;cursor:pointer}
+  .qsort.on{background:var(--accent);color:#0d1117;font-weight:700}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛰️ Fraud Pattern Radar</h1>
+  <span class="tag">Explainable claim-fraud scoring · ring detection · R1–R16</span>
+  <button class="btn" onclick="openFnol()">＋ Score claim at intake (FNOL)</button>
+  <button class="btn ghost" onclick="resetDemo()" title="Remove claims added at runtime">⟲ Reset</button>
+  <button class="btn ghost" onclick="openRules()" title="Show all 16 rules + live firing data">📖 Rules</button>
+  <button class="btn ghost" onclick="openRuleLab()" title="AI proposes new rules; you review & adopt">🧪 Rule Lab</button>
+  <a class="btn ghost" href="/deck" target="_blank" rel="noopener" title="Open the pitch deck">📊 Pitch</a>
+  <a class="btn ghost" href="/arch" target="_blank" rel="noopener" title="Open the architecture deep-dive">⚙️ Architecture</a>
+  <button class="btn ghost" id="themeBtn" onclick="toggleTheme()" title="Toggle light / dark">🌙</button>
+  <span id="status">loading…</span>
+</header>
+<main>
+  <div class="col" id="queue">
+    <div class="qhead">
+      <h2 style="margin:0">Claim queue</h2>
+      <div class="qsortwrap">
+        <button class="qsort on" id="sortRisk" onclick="setSort('risk')" title="Highest fraud risk first">Risk</button>
+        <button class="qsort" id="sortExp" onclick="setSort('exposure')" title="Risk × claim amount — surfaces the highest-$ risky claims">Risk×$</button>
+      </div>
+    </div>
+    <div id="claims"></div>
+  </div>
+  <div class="col center">
+    <div class="bar">
+      <strong>Fraud-ring network</strong>
+      <div class="legend">
+        <span><span class="dot" style="background:var(--siu)"></span>High</span>
+        <span><span class="dot" style="background:var(--elevated)"></span>Medium</span>
+        <span><span class="dot" style="background:var(--low)"></span>Low</span>
+        <span style="border:1px solid var(--accent);border-radius:3px;padding:0 5px;color:var(--muted)">📞 shared detail</span>
+        <span style="color:var(--muted)">● claims link to a 📞/🔧/⚖️ box — a <b style="color:var(--siu)">red box</b> shared by different claimants <b>is</b> the ring</span>
+      </div>
+    </div>
+    <div id="graph"></div>
+    <div id="zoomctl">
+      <button onclick="zoomBy(1.25)" title="Zoom in">＋</button>
+      <button onclick="zoomBy(0.8)" title="Zoom out">−</button>
+      <button onclick="fitGraph()" title="Fit to screen">⤢</button>
+    </div>
+  </div>
+  <div class="col" id="detail"><div class="empty">Select a claim to see why it was flagged.</div></div>
+</main>
+
+<div id="rulesModal" class="modal-bg" style="display:none">
+  <div class="modal wide">
+    <h2>📖 Rule catalog · R1–R16</h2>
+    <div class="rules-summary" id="rulesSummary"></div>
+    <div id="rulesBody"></div>
+    <div class="modal-actions">
+      <button class="btn" onclick="closeRules()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="labModal" class="modal-bg" style="display:none">
+  <div class="modal wide">
+    <h2>🧪 Rule Lab · offline rule R&D <span style="font-weight:400;color:var(--muted);font-size:13px">(human-in-the-loop)</span></h2>
+    <div class="rules-summary">AI mines the book for patterns the current rules miss and proposes new rules in a safe, fixed vocabulary. You review and <b>Adopt</b> the good ones — adopted rules then run <b>deterministically</b> alongside R1–R16.</div>
+    <div id="labAdopted"></div>
+    <div style="margin:14px 0">
+      <button class="btn" onclick="discoverRules()">🔎 Discover missing rules with AI</button>
+      <span id="labMsg" style="color:var(--muted);font-size:12px;margin-left:8px"></span>
+    </div>
+    <div id="labProposals"></div>
+    <div class="modal-actions"><button class="btn" onclick="closeLab()">Close</button></div>
+  </div>
+</div>
+
+<div id="fnolModal" class="modal-bg" style="display:none">
+  <div class="modal">
+    <h2>🛰️ Score a claim at intake (FNOL)</h2>
+    <div style="color:var(--muted);font-size:12px;margin-bottom:10px">
+      Scored live against the current book — shared identifiers pull it into a ring in real time.</div>
+    <div class="presets">
+      <span style="color:var(--muted);font-size:12px;align-self:center">Scenarios:</span>
+      <button class="chip" onclick="loadPreset('ring')">🔴 Ring member (walk-in)</button>
+      <button class="chip" onclick="loadPreset('gamer')">🟠 Threshold gamer</button>
+      <button class="chip" onclick="loadPreset('clean')">🟢 Clean claim</button>
+      <button class="chip" onclick="loadPreset('all16')">🌈 All 16 rules (163)</button>
+    </div>
+    <div class="presets">
+      <span style="color:var(--muted);font-size:12px;align-self:center">By category — each fires one group of rules:</span>
+      <button class="chip" onclick="loadPreset('identity')">🪪 Identity · R1–R3</button>
+      <button class="chip" onclick="loadPreset('timing')">⏱️ Timing · R4–R6</button>
+      <button class="chip" onclick="loadPreset('amount')">💰 Amount · R7–R8</button>
+      <button class="chip" onclick="loadPreset('behave')">🎭 Behaviour · R9–R11</button>
+      <button class="chip" onclick="loadPreset('network')">🕸️ Network · R12–R13</button>
+      <button class="chip" onclick="loadPreset('docs')">📄 Documents · R14–R16</button>
+    </div>
+    <div id="aiIntake" style="display:none;margin-bottom:10px;padding:10px;border:1px dashed var(--accent);border-radius:8px">
+      <div style="color:var(--accent);font-size:12px;margin-bottom:6px;font-weight:600">✨ AI intake — describe the claim in plain English; AI extracts the fields (you review before scoring):</div>
+      <textarea id="fnolText" spellcheck="false" placeholder="e.g. A customer filed an auto theft claim for $24,000 five days after buying the policy, used QuickFix Auto Body, phone 555-0100, no police report, and pushed for fast cash while refusing inspection..." style="width:100%;height:78px;background:var(--input);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font:13px/1.5 -apple-system,sans-serif;resize:vertical"></textarea>
+      <div style="margin-top:6px"><button class="btn" onclick="extractClaim()">✨ Extract with AI ▶</button>
+        <span id="aiExtractMsg" style="color:var(--muted);font-size:12px;margin-left:8px"></span></div>
+    </div>
+    <textarea id="fnolJson" spellcheck="false"></textarea>
+    <div id="fnolErr" class="err"></div>
+    <div class="modal-actions">
+      <button class="btn ghost" onclick="closeFnol()">Cancel</button>
+      <button class="btn" onclick="submitFnol()">Score claim ▶</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const BAND_COLOR = {low:'#2ea043', medium:'#d29922', high:'#f85149'};
+const BAND_LABEL = {low:'LOW', medium:'MEDIUM', high:'HIGH'};
+let claims = [], network = null, nodesDS = null, edgesDS = null, graphNodes = [], fnolCache = {};
+let aiMode = false, currentClaimId = null, labProps = [], sortMode = 'risk';
+
+async function j(url, opts){ const r = await fetch(url, opts); if(!r.ok) throw new Error(url+' '+r.status); return r.json(); }
+
+async function reload(){
+  const h = await j('/api/health');
+  aiMode = h.ai_mode;
+  document.getElementById('status').textContent =
+    `${h.status} · ${h.claims} claims · ${h.rings} ring(s)`;
+  claims = await j('/api/claims');
+  renderQueue();
+  await renderGraph();
+}
+
+async function boot(){
+  await reload();
+  if(claims.length) selectClaim(claims[0].claim_id);
+}
+
+function setSort(m){
+  sortMode = m;
+  document.getElementById('sortRisk').classList.toggle('on', m === 'risk');
+  document.getElementById('sortExp').classList.toggle('on', m === 'exposure');
+  renderQueue();
+}
+
+function renderQueue(){
+  const el = document.getElementById('claims');
+  el.innerHTML = '';
+  // Risk = score desc. Risk×$ = score × amount (exposure) — clean claims (score 0)
+  // stay at the bottom, and among flagged ones the biggest-dollar risk floats up.
+  const list = claims.slice().sort((a,b) =>
+    sortMode === 'exposure' ? (b.score*b.amount - a.score*a.amount) : (b.score - a.score));
+  for(const c of list){
+    const d = document.createElement('div');
+    d.className = 'claim'; d.id = 'q-'+c.claim_id;
+    d.onclick = () => selectClaim(c.claim_id);
+    d.innerHTML = `
+      <div class="top">
+        <span class="cid">${c.claim_id}
+          ${fnolIds.has(c.claim_id)?'<span class="fnol-tag">LIVE</span>':''}
+          ${c.ring_ids.map(r=>`<span class="ring">${r}</span>`).join('')}</span>
+        <span class="badge b-${c.band}">${BAND_LABEL[c.band]} · ${c.score}</span>
+      </div>
+      <div class="meta">${c.claimant} · ${c.claim_type} · $${c.amount.toLocaleString()} · ${c.rule_count} rule(s)</div>`;
+    el.appendChild(d);
+  }
+}
+
+const HUB_ICON = {phone:'📞', bank:'🏦', ip:'🌐', attorney:'⚖️', address:'🏠', repairer:'🔧'};
+
+async function renderGraph(){
+  const g = await j('/api/graph');
+  if(network){ try{ network.destroy(); }catch(e){} network = null; }  // avoid leftover canvas / double layout
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  const nodeText = '#0d1117';                       // dark text reads on the coloured claim dots
+  const ringOf = {}; g.nodes.forEach(n => ringOf[n.id] = n.ring);
+  const nodes = [], edges = [];
+
+  // Claim nodes — a coloured dot per claim (colour = risk band, size = score).
+  for(const n of g.nodes){
+    nodes.push({
+      id: n.id, label: `${n.id}\n${n.claimant} · ${n.score}`,
+      title: `${n.claimant} — ${BAND_LABEL[n.band]} (${n.score})${n.ring ? ' · '+n.ring : ''}`,
+      color: {background: BAND_COLOR[n.band], border: n.ring ? '#f85149' : '#30363d',
+              highlight:{background: BAND_COLOR[n.band], border:'#58a6ff'}},
+      font:{color: nodeText, size:13, face:'-apple-system'},
+      shape:'dot', size: 16 + Math.min(26, n.score/2), borderWidth: n.ring ? 3 : 1
+    });
+  }
+
+  // Hub nodes — the SHARED detail (phone/shop/attorney/…). This is the key change:
+  // instead of cryptic claim↔claim edges, every shared value is its own box, so a
+  // box wired to several different claimants literally *is* the ring.
+  for(const h of (g.hubs || [])){
+    const isRing = (h.claims || []).some(c => ringOf[c]);
+    const val = (h.value || '').length > 18 ? h.value.slice(0,17) + '…' : h.value;
+    nodes.push({
+      id: h.id, label: `${HUB_ICON[h.type] || '•'} ${val}`,
+      title: `shared ${h.label} across ${h.claims.length} claims: ${h.claims.join(', ')}`,
+      shape:'box', shapeProperties:{borderRadius:6}, margin:7,
+      color:{background: light ? '#eaf0f7' : '#161b22',
+             border: isRing ? '#f85149' : '#58a6ff',
+             highlight:{background: light ? '#dbe6f3' : '#1b2430', border:'#58a6ff'}},
+      font:{color: light ? '#1f2328' : '#c9d4e0', size:12, face:'-apple-system'},
+      borderWidth: isRing ? 2.5 : 1
+    });
+    for(const c of (h.claims || [])){
+      edges.push({from: c, to: h.id, width: isRing ? 2.5 : 1, dashes: !isRing,
+        color:{color: isRing ? '#f85149' : '#8b949e', highlight:'#58a6ff'}});
+    }
+  }
+
+  graphNodes = g.nodes;
+  nodesDS = new vis.DataSet(nodes);
+  edgesDS = new vis.DataSet(edges);
+  network = new vis.Network(document.getElementById('graph'), {nodes: nodesDS, edges: edgesDS}, {
+    physics:{stabilization:{iterations:280},
+             barnesHut:{springLength:170, gravitationalConstant:-20000, centralGravity:0.12,
+                        damping:0.6, avoidOverlap:0.85}},
+    edges:{smooth:{type:'continuous', roundness:0.35}},
+    interaction:{hover:true, tooltipDelay:120, hideEdgesOnDrag:true},
+    nodes:{shadow:false}
+  });
+  // Let it settle, then FREEZE physics (no perpetual jiggle) and frame the graph.
+  network.once('stabilizationIterationsDone', () => {
+    network.setOptions({physics:false});
+    network.fit();                 // instant frame — no lingering animation to swallow clicks
+  });
+  // Clicking a claim opens it; clicking a hub highlights its connected claims.
+  network.on('click', p => {
+    const id = p.nodes[0];
+    if(!id) return;
+    if(String(id).startsWith('HUB::')){ network.selectNodes([id, ...network.getConnectedNodes(id)]); }
+    else selectClaim(id);
+  });
+}
+
+// Zoom controls for the ring graph. Instant (no animation) so a single click
+// always registers and the view never jiggles.
+function zoomBy(f){
+  if(!network) return;
+  const s = Math.max(0.2, Math.min(4, (network.getScale() || 1) * f));
+  network.moveTo({scale: s});
+}
+function fitGraph(){ if(network) network.fit(); }
+
+// Re-colour the shared-detail (hub) boxes for the current theme WITHOUT rebuilding
+// the network — so a light/dark toggle never moves the graph.
+function recolorHubs(){
+  if(!nodesDS) return;
+  const light = document.documentElement.getAttribute('data-theme') === 'light';
+  const ups = [];
+  nodesDS.forEach(n => {
+    if(String(n.id).startsWith('HUB::')){
+      const border = (n.color && n.color.border) || '#58a6ff';   // keep ring(red)/non-ring(blue)
+      ups.push({id: n.id,
+        color:{background: light ? '#eaf0f7' : '#161b22', border,
+               highlight:{background: light ? '#dbe6f3' : '#1b2430', border:'#58a6ff'}},
+        font:{color: light ? '#1f2328' : '#c9d4e0', size:12, face:'-apple-system'}});
+    }
+  });
+  if(ups.length) nodesDS.update(ups);
+}
+
+async function selectClaim(id){
+  currentClaimId = id;
+  document.querySelectorAll('.claim').forEach(e=>e.classList.remove('active'));
+  const q = document.getElementById('q-'+id); if(q) q.classList.add('active');
+  if(network && nodesDS.get(id)){ network.selectNodes([id]); network.focus(id, {scale:1.1, animation:true}); }
+  if(fnolCache[id]){ renderDetail(fnolCache[id].score, fnolCache[id].claim); return; }
+  const d = await j('/api/claims/'+id);
+  renderDetail(d.score, d.claim);
+}
+
+function renderDetail(s, claim){
+  const el = document.getElementById('detail');
+  const rules = s.fired.slice().sort((a,b)=>b.points-a.points);
+  el.innerHTML = `
+    <h2>${claim.id} · ${claim.claim_type}</h2>
+    <div class="score-hero">
+      <span class="n" style="color:${BAND_COLOR[s.band]}">${s.score}</span>
+      <span class="badge b-${s.band}">${BAND_LABEL[s.band]}</span>
+      ${s.ring_ids.map(r=>`<span class="ring">${r}</span>`).join('')}
+    </div>
+    <div style="color:${BAND_COLOR[s.band]};font-weight:600;margin-bottom:8px">➜ ${s.action||''}</div>
+    <div class="meta" style="color:var(--muted)">
+      ${claim.party.name} · $${claim.amount.toLocaleString()} · loss ${claim.loss_datetime.slice(0,10)} · reported ${claim.reported_date}
+    </div>
+    <div class="narr" id="narrBox">🧠 ${s.narrative || 'No narrative.'}</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;margin:2px 0 4px">
+      <button class="btn ghost" style="font-size:12px;padding:5px 10px" onclick="genReferral('${claim.id}')">📝 Draft SIU referral</button>
+      ${s.ring_ids.length ? `<button class="btn ghost" style="font-size:12px;padding:5px 10px" onclick="genRing('${s.ring_ids[0]}')">🕸️ Summarize ${s.ring_ids[0]}</button>` : ''}
+    </div>
+    <div id="aiOut"></div>
+    <h2>Why flagged · ${rules.length} rule(s)</h2>
+    ${rules.length ? rules.map(r=>`
+      <div class="rule">
+        <div class="rh"><span class="rid">${r.rule_id}</span>
+          <span class="pts">+${r.points}</span></div>
+        <div class="cat">${r.category}</div>
+        <div class="rsn">${r.reason}</div>
+      </div>`).join('') : '<div class="empty">No rules fired — clean on current signals.</div>'}
+  `;
+  if(aiMode) upgradeNarrative(claim.id);
+}
+
+// In AI mode, swap the deterministic note for an AI-written one when it's ready.
+async function upgradeNarrative(id){
+  const box = document.getElementById('narrBox');
+  if(box) box.innerHTML = '✍️ <span style="color:var(--muted)">writing investigator note…</span>';
+  try{
+    const d = await j('/api/claims/'+id+'/narrative');
+    if(id === currentClaimId){
+      const b = document.getElementById('narrBox');
+      if(b) b.textContent = '🧠 ' + d.narrative;
+    }
+  }catch(e){ /* keep the deterministic note on any error */ }
+}
+
+// ---- FNOL live scoring ------------------------------------------------------
+const PRESETS = {
+  ring: {
+    id:"FNOL-1", claim_type:"auto_theft",
+    party:{claimant_id:"CL-99", name:"Walk-in Wael", phone:"555-0100"},
+    policy:{number:"P-99", inception_date:"2026-07-25"},
+    loss_datetime:"2026-07-26T02:00:00", reported_date:"2026-07-28",
+    amount:24500, risk_address:"Plot 4, Karachi",
+    repairer:"QuickFix Auto Body", police_report_present:false
+  },
+  gamer: {
+    id:"FNOL-2", claim_type:"windshield",
+    party:{claimant_id:"CL-77", name:"Grace Park", policyholder_address:"5 Hill St, Lahore"},
+    policy:{number:"P-77", inception_date:"2026-07-20"},
+    loss_datetime:"2026-07-22T12:00:00", reported_date:"2026-07-25",
+    amount:4875, risk_address:"5 Hill St, Karachi", police_report_present:true
+  },
+  clean: {
+    id:"FNOL-3", claim_type:"windshield",
+    party:{claimant_id:"CL-55", name:"Nora Ali", policyholder_address:"2 Bay Rd, Karachi"},
+    policy:{number:"P-55", inception_date:"2022-01-01"},
+    loss_datetime:"2026-07-15T12:00:00", reported_date:"2026-07-15",
+    amount:300, risk_address:"2 Bay Rd, Karachi", police_report_present:true
+  },
+  // Crafted to trip every rule R1–R16 at once (verified: score 163, all 16 fire).
+  // Reuses the ring's phone/repairer/attorney (R12/R13), a repeat claimant CL-4 (R5),
+  // a duplicate photo hash + EXIF mismatch (R15/R16), and conflicting documents (R14).
+  all16: {
+    id:"FNOL-ALL", claim_type:"auto_theft", segment:"motor",
+    party:{claimant_id:"CL-4", name:"Omar Malik", phone:"555-0100",
+           bank_account:"ACC-999", attorney:"Shady & Co",
+           policyholder_address:"12 Elm St, Lahore"},
+    policy:{number:"P-ALL", inception_date:"2026-07-20",
+            reinstatement_date:"2026-07-20", lapsed:true},
+    loss_datetime:"2026-07-25T02:30:00", reported_date:"2026-08-05",
+    amount:24900, risk_address:"Plot 9, Karachi",
+    demands_fast_cash:true, refused_inspection:true, police_report_present:false,
+    repairer:"QuickFix Auto Body",
+    invoices:[{number:"INV-9001", vendor:"GhostParts", line_items:[
+      {description:"parts", amount:8000}, {description:"labor", amount:4000}]}],
+    photos:[{id:"PH-ALL", phash:"ffe1c0803f8f1f0f",
+             exif_datetime:"2026-07-25T03:00:00", exif_city:"Dubai"}],
+    documents:[{field:"loss_date", source:"claim_form", value:"2026-07-25"},
+               {field:"loss_date", source:"invoice", value:"2026-07-10"},
+               {field:"loss_date", source:"pdf_metadata", value:"2026-06-30"}]
+  },
+
+  // --- Category presets: each fires exactly one group of rules (verified on the
+  //     seed book). Click ⟲ Reset before demoing amount (R7 depends on percentiles).
+  identity: {  // R1 just-in-time · R2 reinstated pre-loss · R3 address mismatch
+    id:"P-IDENTITY", claim_type:"windshield",
+    party:{claimant_id:"CL-IDT", name:"Ivy Novak", phone:"555-9001",
+           policyholder_address:"1 Alpha St, Lahore"},
+    policy:{number:"P-IDT", inception_date:"2026-07-20", reinstatement_date:"2026-07-10"},
+    loss_datetime:"2026-07-22T12:00:00", reported_date:"2026-07-25",
+    amount:1500, risk_address:"2 Beta Rd, Karachi", police_report_present:true
+  },
+  timing: {  // R4 late report · R5 serial claimant (reuses CL-4) · R6 weak-witness timing
+    id:"P-TIMING", claim_type:"windshield",
+    party:{claimant_id:"CL-4", name:"Dan Wu", phone:"555-9002",
+           policyholder_address:"7 Birch Ln, Karachi"},
+    policy:{number:"P-TIM", inception_date:"2025-01-01"},
+    loss_datetime:"2026-07-25T02:30:00", reported_date:"2026-08-06",
+    amount:2000, risk_address:"7 Birch Ln, Karachi", police_report_present:true
+  },
+  amount: {  // R7 above 90th percentile · R8 threshold gaming (just under $25k)
+    id:"P-AMOUNT", claim_type:"auto_theft",
+    party:{claimant_id:"CL-AMT", name:"Amir Sethi", phone:"555-9003",
+           policyholder_address:"9 Gamma Rd, Karachi"},
+    policy:{number:"P-AMT", inception_date:"2024-01-01"},
+    loss_datetime:"2026-07-20T12:00:00", reported_date:"2026-07-22",
+    amount:24990, risk_address:"9 Gamma Rd, Karachi", police_report_present:true
+  },
+  behave: {  // R9 fabricated invoices · R10 fast cash + no inspection · R11 no police report
+    id:"P-BEHAVE", claim_type:"auto_theft",
+    party:{claimant_id:"CL-BHV", name:"Bilal Khan", phone:"555-9004",
+           policyholder_address:"3 Delta St, Karachi"},
+    policy:{number:"P-BHV", inception_date:"2024-01-01"},
+    loss_datetime:"2026-07-20T12:00:00", reported_date:"2026-07-23",
+    amount:5000, risk_address:"3 Delta St, Karachi",
+    demands_fast_cash:true, refused_inspection:true, police_report_present:false,
+    invoices:[{number:"INV-7001", vendor:"PartsPlus", line_items:[
+      {description:"parts", amount:3000}, {description:"labor", amount:2000}]}]
+  },
+  network: {  // R12 shared identifiers (joins RING-1) · R13 flagged repairer
+    id:"P-NETWORK", claim_type:"water_damage",
+    party:{claimant_id:"CL-NET", name:"Nadia Farooq", phone:"555-0100",
+           attorney:"Shady & Co", policyholder_address:"6 Epsilon Rd, Karachi"},
+    policy:{number:"P-NET", inception_date:"2024-01-01"},
+    loss_datetime:"2026-07-20T12:00:00", reported_date:"2026-07-22",
+    amount:4000, risk_address:"6 Epsilon Rd, Karachi", police_report_present:true,
+    repairer:"QuickFix Auto Body"
+  },
+  docs: {  // R14 doc inconsistency · R15 duplicate photo · R16 EXIF mismatch
+    id:"P-DOCS", claim_type:"windshield",
+    party:{claimant_id:"CL-DOC", name:"Dara Vaz", phone:"555-9006",
+           policyholder_address:"8 Zeta Ave, Karachi"},
+    policy:{number:"P-DOC", inception_date:"2024-01-01"},
+    loss_datetime:"2026-08-03T12:00:00", reported_date:"2026-08-06",
+    amount:1000, risk_address:"8 Zeta Ave, Karachi", police_report_present:true,
+    photos:[{id:"PH-DOC", phash:"ffe1c0803f8f1f0f",
+             exif_datetime:"2026-08-03T12:30:00", exif_city:"Dubai"}],
+    documents:[{field:"loss_date", source:"claim_form", value:"2026-08-03"},
+               {field:"loss_date", source:"invoice", value:"2026-07-15"}]
+  }
+};
+
+function loadPreset(k){ document.getElementById('fnolJson').value = JSON.stringify(PRESETS[k], null, 2); }
+function openFnol(){
+  const ta = document.getElementById('fnolJson');
+  if(!ta.value.trim()) loadPreset('ring');
+  document.getElementById('aiIntake').style.display = aiMode ? 'block' : 'none';
+  document.getElementById('aiExtractMsg').textContent = '';
+  document.getElementById('fnolErr').textContent = '';
+  document.getElementById('fnolModal').style.display = 'flex';
+}
+
+// INPUT EDGE: free text -> AI-extracted structured claim -> fill JSON for review.
+async function extractClaim(){
+  const text = document.getElementById('fnolText').value.trim();
+  const msg = document.getElementById('aiExtractMsg');
+  if(!text){ msg.textContent = 'Enter a description first.'; return; }
+  msg.textContent = '✨ extracting…';
+  try{
+    const r = await j('/api/extract', {method:'POST',
+      headers:{'content-type':'application/json'}, body: JSON.stringify({text})});
+    if(!r.ok){ msg.textContent = r.error || 'Could not extract.'; return; }
+    document.getElementById('fnolJson').value = JSON.stringify(r.claim, null, 2);
+    msg.textContent = '✓ extracted — review the JSON below, then Score ▶';
+  }catch(e){ msg.textContent = 'Failed: ' + e.message; }
+}
+function closeFnol(){ document.getElementById('fnolModal').style.display = 'none'; }
+
+const fnolIds = new Set(JSON.parse(localStorage.getItem('fnolIds') || '[]'));  // tag live claims
+
+async function submitFnol(){
+  const err = document.getElementById('fnolErr');
+  let claim;
+  try { claim = JSON.parse(document.getElementById('fnolJson').value); }
+  catch(e){ err.textContent = 'Invalid JSON: ' + e.message; return; }
+  err.textContent = 'Scoring & saving…';
+  let res;
+  try { res = await j('/api/claims', {method:'POST', headers:{'content-type':'application/json'},
+                                      body: JSON.stringify(claim)}); }
+  catch(e){ err.textContent = 'Failed (check required fields): ' + e.message; return; }
+
+  // The claim is now persisted in the book; reload real data so it survives refresh.
+  fnolIds.add(res.claim_id);
+  localStorage.setItem('fnolIds', JSON.stringify([...fnolIds]));
+  closeFnol();
+  await reload();
+  selectClaim(res.claim_id);
+}
+
+async function resetDemo(){
+  if(!confirm('Reset to the seed dataset? This removes every claim you added at intake.')) return;
+  await j('/api/reset', {method:'POST'});
+  fnolIds.clear(); localStorage.removeItem('fnolIds');
+  await reload();
+  if(claims.length) selectClaim(claims[0].claim_id);
+}
+
+// ---- Rules showcase ---------------------------------------------------------
+function escapeHtml(s){ return (s||'').replace(/[&<>"']/g, c =>
+  ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+async function openRules(){
+  const data = await j('/api/rules');
+  renderRules(data);
+  document.getElementById('rulesModal').style.display = 'flex';
+}
+function closeRules(){ document.getElementById('rulesModal').style.display = 'none'; }
+
+function renderRules(data){
+  const firing = data.rules.filter(r => r.fired_count > 0).length;
+  document.getElementById('rulesSummary').textContent =
+    `Scored against ${data.total_claims} claims · ${firing} of ${data.rules.length} rules currently firing · click a claim to inspect it`;
+  let html = '', lastCat = null;
+  for(const r of data.rules){
+    if(r.category !== lastCat){ html += `<div class="rcat">${r.category}</div>`; lastCat = r.category; }
+    const on = r.fired_count > 0;
+    html += `<div class="rrow">
+      <div class="rh">
+        <span class="rid">${r.rule_id}</span>
+        <span class="rpts">+${r.points}</span>
+        <span class="rname">${r.name}</span>
+        <span class="rfire ${on?'on':'off'}">${on ? '▲ fires on '+r.fired_count : '— not firing'}</span>
+      </div>
+      <div class="rdesc">${r.description}</div>
+      ${on ? `<div class="rclaims">${r.claims.map(c =>
+                `<span class="rchip" onclick="selectFromRules('${c}')">${c}</span>`).join('')}</div>
+              <div class="rex">e.g. ${escapeHtml(r.example_reason)}</div>` : ''}
+    </div>`;
+  }
+  document.getElementById('rulesBody').innerHTML = html;
+}
+function selectFromRules(id){ closeRules(); selectClaim(id); }
+
+// OUTPUT EDGE: draft SIU referral / summarize a ring (AI or template).
+async function genReferral(id){
+  const out = document.getElementById('aiOut');
+  out.innerHTML = '<div class="narr">📝 <span style="color:var(--muted)">drafting SIU referral…</span></div>';
+  try{
+    const d = await j('/api/claims/'+id+'/referral');
+    out.innerHTML = '<div class="narr" style="white-space:pre-wrap">📝 '+escapeHtml(d.referral)+'</div>';
+  }catch(e){ out.innerHTML = ''; }
+}
+async function genRing(rid){
+  const out = document.getElementById('aiOut');
+  out.innerHTML = '<div class="narr">🕸️ <span style="color:var(--muted)">summarizing '+rid+'…</span></div>';
+  try{
+    const d = await j('/api/rings/'+rid+'/summary');
+    out.innerHTML = '<div class="narr">🕸️ <b>'+rid+'</b> ('+d.members.join(', ')+')<br>'+escapeHtml(d.summary)+'</div>';
+  }catch(e){ out.innerHTML = ''; }
+}
+
+// ---- Rule Lab (offline rule R&D, human-in-the-loop) -------------------------
+function condText(conds){
+  return (conds||[]).map(c => `${c.field} ${c.op}${c.value!==undefined&&c.value!==null?' '+c.value:''}`).join(' AND ');
+}
+async function openRuleLab(){
+  document.getElementById('labProposals').innerHTML = '';
+  document.getElementById('labMsg').textContent = '';
+  await renderAdopted();
+  document.getElementById('labModal').style.display = 'flex';
+}
+function closeLab(){ document.getElementById('labModal').style.display = 'none'; }
+
+async function renderAdopted(){
+  const d = await j('/api/rules/custom');
+  const el = document.getElementById('labAdopted');
+  if(!d.rules.length){
+    el.innerHTML = '<div class="rcat">Adopted rules</div><div class="rules-summary">None adopted yet — discover and adopt below.</div>';
+    return;
+  }
+  el.innerHTML = '<div class="rcat">Adopted rules · live in the engine</div>' + d.rules.map(r => `
+    <div class="rrow"><div class="rh">
+      <span class="rid">${r.id}</span><span class="rpts">+${r.points}</span>
+      <span class="rname">${escapeHtml(r.name)}</span>
+      <button class="btn ghost" style="margin-left:auto;font-size:11px;padding:3px 9px" onclick="removeCustom('${r.id}')">Remove</button>
+    </div><div class="rdesc">if ${escapeHtml(condText(r.conditions))}</div></div>`).join('');
+}
+
+async function discoverRules(){
+  const msg = document.getElementById('labMsg');
+  msg.textContent = '🔎 analysing the book…';
+  try{
+    const d = await j('/api/rules/discover', {method:'POST',
+      headers:{'content-type':'application/json'}, body:'{}'});
+    labProps = d.proposals || [];
+    msg.textContent = d.ai ? 'AI-proposed (review before adopting):' : 'Proposed (offline heuristics):';
+    renderProposals();
+  }catch(e){ msg.textContent = 'Failed: ' + e.message; }
+}
+
+function renderProposals(){
+  const el = document.getElementById('labProposals');
+  if(!labProps.length){ el.innerHTML = '<div class="rules-summary">No valid proposals.</div>'; return; }
+  el.innerHTML = '<div class="rcat">Proposed · review &amp; adopt</div>' + labProps.map((p,i) => `
+    <div class="rrow"><div class="rh">
+      <span class="rpts">+${p.points}</span><span class="rname">${escapeHtml(p.name)}</span>
+      <span class="rfire ${p.would_flag.length?'on':'off'}">${p.would_flag.length ? 'would flag '+p.would_flag.length : 'flags 0'}</span>
+      <button class="btn" style="margin-left:8px;font-size:11px;padding:3px 11px" onclick="adoptRuleIdx(${i})">➕ Adopt</button>
+    </div>
+    <div class="rdesc">if ${escapeHtml(condText(p.conditions))}</div>
+    <div class="rex">${escapeHtml(p.rationale||'')}</div>
+    ${p.would_flag.length ? `<div class="rclaims">${p.would_flag.map(c=>`<span class="rchip">${c}</span>`).join('')}</div>` : ''}
+  </div>`).join('');
+}
+
+async function adoptRuleIdx(i){
+  const rule = labProps[i]; if(!rule) return;
+  const msg = document.getElementById('labMsg');
+  try{
+    await j('/api/rules/custom', {method:'POST',
+      headers:{'content-type':'application/json'}, body: JSON.stringify(rule)});
+    await renderAdopted();
+    await reload();                       // re-score the dashboard with the new rule live
+    if(currentClaimId) selectClaim(currentClaimId);
+    msg.textContent = '✓ adopted — now live in the engine and scoring claims';
+  }catch(e){ msg.textContent = 'Adopt failed: ' + e.message; }
+}
+
+async function removeCustom(id){
+  await j('/api/rules/custom/'+id, {method:'DELETE'});
+  await renderAdopted();
+  await reload();
+  if(currentClaimId) selectClaim(currentClaimId);
+}
+
+// Close modals on Escape / click outside.
+document.addEventListener('keydown', e => { if(e.key === 'Escape'){ closeFnol(); closeRules(); closeLab(); } });
+document.getElementById('fnolModal').addEventListener('click', e => {
+  if(e.target.id === 'fnolModal') closeFnol(); });
+document.getElementById('rulesModal').addEventListener('click', e => {
+  if(e.target.id === 'rulesModal') closeRules(); });
+document.getElementById('labModal').addEventListener('click', e => {
+  if(e.target.id === 'labModal') closeLab(); });
+
+// ---- theme (dark / light) ---------------------------------------------------
+function applyTheme(t){
+  document.documentElement.setAttribute('data-theme', t);
+  localStorage.setItem('theme', t);
+  const b = document.getElementById('themeBtn'); if(b) b.textContent = t === 'light' ? '☀️' : '🌙';
+  recolorHubs();                 // re-colour hub boxes in place — never moves the graph
+}
+function toggleTheme(){
+  const cur = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+  applyTheme(cur === 'light' ? 'dark' : 'light');
+}
+applyTheme(localStorage.getItem('theme') || 'dark');
+
+boot().catch(e => { document.getElementById('status').textContent = 'error: '+e.message; });
+</script>
+</body>
+</html>

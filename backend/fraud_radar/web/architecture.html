@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fraud Pattern Radar — Architecture &amp; ROI</title>
+<!--
+  Architecture deck: deterministic rulebook × AI, diagram-first, with the business value.
+  Navigate: → / ← / Space / click, or the dots. F = fullscreen. All diagrams inline SVG.
+-->
+<style>
+  :root{
+    --bg:#0b0f16; --panel:#161b22; --line:#232a35; --ink:#e6edf3;
+    --muted:#8b949e; --low:#2ea043; --med:#d29922; --high:#f85149;
+    --accent:#58a6ff; --accent2:#a371f7; --green:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font:16px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(1200px 700px at 80% -10%, #101d2c 0%, var(--bg) 55%);
+    color:var(--ink); overflow:hidden;}
+  #stage{height:100vh;width:100vw;position:relative}
+  .slide{position:absolute; inset:0; display:none; flex-direction:column;
+    justify-content:center; padding:5vh 7vw; opacity:0; transition:opacity .4s ease; overflow:auto;}
+  .slide.on{display:flex; opacity:1; animation:rise .5s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(32px,5.2vw,58px);line-height:1.07;letter-spacing:-1px;font-weight:800}
+  h2{font-size:clamp(22px,3.1vw,37px);font-weight:800;letter-spacing:-.5px;margin-bottom:6px}
+  h2 .k{color:var(--accent)}
+  p.lead{font-size:clamp(16px,1.7vw,21px);color:#cdd9e5;max-width:66ch}
+  .grad{background:linear-gradient(100deg,var(--accent),var(--accent2) 60%,var(--high));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .eyebrow{color:var(--accent);font-weight:700;letter-spacing:3px;text-transform:uppercase;font-size:13px;margin-bottom:12px}
+  .muted{color:var(--muted)}
+  .tag{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:4px 12px;font-size:13px;color:var(--muted);margin-right:8px}
+  code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:.86em;background:#0d1117;border:1px solid var(--line);border-radius:5px;padding:1px 5px;color:#9db2c8}
+  .plain{background:#0e1a12;border:1px solid rgba(46,160,67,.35);border-left:4px solid var(--green);
+         border-radius:10px;padding:11px 15px;margin-top:14px;color:#d6e8dc;font-size:clamp(14px,1.55vw,19px)}
+  .plain .t{color:#8ee6a6;font-weight:800;margin-right:6px}
+  .plain b{color:#fff}
+  .foot{margin-top:14px;color:var(--muted);font-size:13.5px}
+  .check{color:#5bd67c;font-weight:800}
+  .kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 7px;font-size:12px;color:var(--muted);background:#0d1117}
+  .diagram{width:100%;max-width:1060px;margin:4px auto 0}
+  .diagram svg{width:100%;height:auto;display:block}
+  .cap{color:var(--muted);font-size:13.5px;margin-top:10px;text-align:center;max-width:82ch;margin-left:auto;margin-right:auto}
+  svg text{font-family:inherit;dominant-baseline:middle}
+  .d-box{fill:#10151d;stroke:#2a3340;stroke-width:1.5}
+  .d-hi{fill:#0f1a27;stroke:var(--accent);stroke-width:1.8}
+  .d-warn{fill:#1a1526;stroke:var(--accent2);stroke-width:1.5;stroke-dasharray:5 4}
+  .d-t{fill:var(--ink);font-weight:800}
+  .d-s{fill:var(--muted)}
+  .d-edge{stroke:#3b4553;stroke-width:2;fill:none}
+  .d-flow{stroke:var(--accent);stroke-width:2.2;fill:none}
+  .draw{stroke-dasharray:8 7;animation:march 1.2s linear infinite}
+  @keyframes march{to{stroke-dashoffset:-30}}
+  .roi{display:grid;grid-template-columns:repeat(3,1fr);gap:13px;margin-top:14px}
+  .roic{border:1px solid var(--line);border-radius:13px;padding:15px 16px;background:linear-gradient(180deg,#141b24,#10151d);position:relative;overflow:hidden}
+  .roic::before{content:"";position:absolute;left:0;top:0;bottom:0;width:3px;background:linear-gradient(180deg,var(--accent),var(--accent2))}
+  .roic .i{font-size:22px}
+  .roic .lever{font-weight:800;font-size:17px;margin-top:5px}
+  .roic p{color:var(--muted);font-size:12.5px;margin-top:3px}
+  .roic .up{color:#5bd67c}.roic .down{color:#5bd67c}
+  .recap{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  .recap div{border:1px solid var(--line);border-radius:12px;padding:14px;text-align:center;background:linear-gradient(180deg,#141b24,#10151d)}
+  .recap .b{font-size:clamp(18px,2.4vw,26px);font-weight:800}
+  .recap .l{color:var(--muted);font-size:11.5px;margin-top:4px}
+  .closebig{font-size:clamp(26px,4.4vw,50px);font-weight:800;letter-spacing:-1px;margin-top:6px}
+  #bar{position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--accent2));width:0;transition:width .3s;z-index:20}
+  #dots{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20}
+  #dots b{width:9px;height:9px;border-radius:50%;background:#2b333f;cursor:pointer;transition:.2s}
+  #dots b.on{background:var(--accent);transform:scale(1.25)}
+  #count{position:fixed;bottom:14px;right:22px;color:var(--muted);font-size:13px;z-index:20}
+  #hint{position:fixed;bottom:14px;left:22px;color:var(--muted);font-size:12px;z-index:20}
+  .brandbar{position:fixed;top:14px;left:22px;color:var(--muted);font-size:13px;z-index:20}
+  .brandbar b{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div class="brandbar">⚙️ Architecture &amp; ROI &nbsp;·&nbsp; Team <b>Overwatch</b></div>
+<div id="stage">
+
+  <!-- 1 TITLE -->
+  <section class="slide">
+    <div class="eyebrow">Architecture · the outcome</div>
+    <h1>The <span class="grad">rigor of rules</span>.<br>The <span class="grad">reach</span> of AI.</h1>
+    <p class="lead" style="margin-top:16px">A deterministic fraud engine an auditor can trust, wrapped by AI that reads the mess,
+      writes the paperwork, and helps the rulebook grow — always with a human in the loop.</p>
+    <div style="margin-top:20px">
+      <span class="tag">Deterministic core</span><span class="tag">AI at the edges</span>
+      <span class="tag">Human-approved rules</span><span class="tag">Runs offline</span>
+    </div>
+  </section>
+
+  <!-- 2 THESIS: VENN -->
+  <section class="slide">
+    <div class="eyebrow">The big idea</div>
+    <h2>Rules alone are rigid. AI alone is a black box.</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 380" role="img" aria-label="Deterministic rulebook and AI overlap into the product">
+        <circle cx="410" cy="200" r="168" fill="rgba(63,185,80,.13)" stroke="#3fb950" stroke-width="2"/>
+        <circle cx="630" cy="200" r="168" fill="rgba(163,113,247,.13)" stroke="#a371f7" stroke-width="2"/>
+        <text x="290" y="96" text-anchor="middle" fill="#5bd67c" font-size="17" font-weight="800">🏛️ Deterministic rulebook</text>
+        <g fill="#cfe9d6" font-size="14" text-anchor="middle"><text x="270" y="176">auditable</text><text x="270" y="204">reproducible</text><text x="270" y="232">defensible</text></g>
+        <text x="748" y="96" text-anchor="middle" fill="#c8a6ff" font-size="17" font-weight="800">🤖 AI</text>
+        <g fill="#e0d4f5" font-size="14" text-anchor="middle"><text x="772" y="176">reads the mess</text><text x="772" y="204">writes the notes</text><text x="772" y="232">proposes rules</text></g>
+        <rect x="440" y="174" width="160" height="54" rx="12" fill="#0c1420" stroke="#58a6ff" stroke-width="1.8"/>
+        <text x="520" y="194" text-anchor="middle" fill="#8ecbff" font-size="13.5" font-weight="800">Fraud Pattern Radar</text>
+        <text x="520" y="213" text-anchor="middle" class="d-s" font-size="11.5">defensible + adaptive</text>
+      </svg>
+    </div>
+    <div class="plain"><span class="t">The mixture is the shot:</span> a rulebook a regulator trusts, made <b>smarter and far less manual</b> by AI — without ever handing the AI the verdict.</div>
+  </section>
+
+  <!-- 3 SYSTEM AT A GLANCE -->
+  <section class="slide">
+    <div class="eyebrow">System at a glance</div>
+    <h2>One claim in → a scored, explained, routed decision out</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 300" role="img" aria-label="Claim flows through AI to the deterministic core and back out">
+        <defs><marker id="ap" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#a371f7"/></marker>
+          <filter id="g" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+        <rect x="22" y="112" width="150" height="72" rx="12" class="d-box"/><text x="97" y="140" text-anchor="middle" class="d-t" font-size="14">📄 Claim</text><text x="97" y="160" text-anchor="middle" class="d-s" font-size="11">any format</text>
+        <path d="M172,148 H322" stroke="#a371f7" stroke-width="2.6" fill="none" marker-end="url(#ap)"/>
+        <rect x="196" y="131" width="104" height="30" rx="15" fill="#1a1526" stroke="#a371f7" stroke-width="1.4"/><text x="248" y="146" text-anchor="middle" fill="#c8a6ff" font-size="12" font-weight="700">✨ structures</text>
+        <rect x="330" y="96" width="300" height="120" rx="16" fill="#0e1a12" stroke="#3fb950" stroke-width="2.5" filter="url(#g)"/>
+        <text x="480" y="126" text-anchor="middle" fill="#5bd67c" font-size="15" font-weight="800">🏛️ DETERMINISTIC CORE</text>
+        <text x="480" y="150" text-anchor="middle" class="d-t" font-size="12.5">16 rules + graph analysis</text>
+        <text x="480" y="172" text-anchor="middle" class="d-t" font-size="12.5">score → band → ring</text>
+        <text x="480" y="194" text-anchor="middle" class="d-s" font-size="11">reproducible · AI-free</text>
+        <path d="M630,148 H780" stroke="#a371f7" stroke-width="2.6" fill="none" marker-end="url(#ap)"/>
+        <rect x="654" y="131" width="92" height="30" rx="15" fill="#1a1526" stroke="#a371f7" stroke-width="1.4"/><text x="700" y="146" text-anchor="middle" fill="#c8a6ff" font-size="12" font-weight="700">✨ writes</text>
+        <rect x="788" y="104" width="228" height="104" rx="14" class="d-box"/>
+        <text x="808" y="130" text-anchor="start" class="d-t" font-size="12.5">🗂️ ranked SIU queue</text>
+        <text x="808" y="156" text-anchor="start" class="d-t" font-size="12.5">🕸️ fraud-ring graph</text>
+        <text x="808" y="182" text-anchor="start" class="d-t" font-size="12.5">📝 note · 📄 SIU referral</text>
+        <!-- rule lab feedback -->
+        <rect x="330" y="250" width="300" height="40" rx="10" class="d-warn"/><text x="480" y="273" text-anchor="middle" class="d-t" font-size="12.5">🧪 AI proposes rule → 👤 human adopts</text>
+        <path d="M480,250 C480,234 480,228 480,218" stroke="#a371f7" stroke-width="2" fill="none" stroke-dasharray="6 4" marker-end="url(#ap)"/>
+        <text x="516" y="238" text-anchor="start" fill="#c8a6ff" font-size="10.5">core grows</text>
+      </svg>
+    </div>
+    <p class="cap">Purple = AI on the <b>edges</b> · green = the deterministic core the AI never decides. The Rule Lab loop lets the engine <b>grow</b>, human-gated.</p>
+  </section>
+
+  <!-- 4 DETERMINISTIC CORE = RECEIPT -->
+  <section class="slide">
+    <div class="eyebrow">The “provably right” half</div>
+    <h2>Every score is an <span class="k">itemised receipt</span></h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 336" role="img" aria-label="A claim's score broken down into rule line items">
+        <rect x="330" y="16" width="380" height="304" rx="14" class="d-box"/>
+        <text x="356" y="46" text-anchor="start" class="d-t" font-size="15">🧾 Claim C-101 · auto_theft</text>
+        <text x="356" y="64" text-anchor="start" class="d-s" font-size="11">why the score is exactly what it is</text>
+        <line x1="352" y1="78" x2="688" y2="78" stroke="#2a3340"/>
+        <g font-size="13"><g class="d-t" text-anchor="start"><text x="356" y="100">R1 · just-in-time cover</text><text x="356" y="126">R12 · shared phone + repairer</text><text x="356" y="152">R8 · threshold gaming</text><text x="356" y="178">R13 · flagged repairer</text><text x="356" y="204">R7 · above 90th-pct amount</text><text x="356" y="230">R3 · address mismatch</text><text x="356" y="256">R11 · no police report</text><text x="356" y="282">R6 · weak-witness timing</text></g>
+        <g fill="#ff7b72" font-weight="800" text-anchor="end"><text x="688" y="100">+15</text><text x="688" y="126">+15</text><text x="688" y="152">+12</text><text x="688" y="178">+10</text><text x="688" y="204">+10</text><text x="688" y="230">+8</text><text x="688" y="256">+7</text><text x="688" y="282">+5</text></g></g>
+        <line x1="352" y1="296" x2="688" y2="296" stroke="#2a3340"/>
+        <text x="356" y="314" text-anchor="start" class="d-t" font-size="15">TOTAL</text>
+        <text x="560" y="314" text-anchor="middle" fill="#f85149" font-size="18" font-weight="800">82</text>
+        <text x="688" y="314" text-anchor="end" fill="#ff7b72" font-size="13" font-weight="800">HIGH → SIU</text>
+        <!-- stamp -->
+        <g transform="rotate(-8 840 150)"><rect x="740" y="120" width="200" height="60" rx="10" fill="none" stroke="#3fb950" stroke-width="2"/><text x="840" y="144" text-anchor="middle" fill="#5bd67c" font-size="13" font-weight="800">🔒 REPRODUCIBLE</text><text x="840" y="163" text-anchor="middle" fill="#5bd67c" font-size="10.5">same input → same score</text></g>
+      </svg>
+    </div>
+    <div class="plain"><span class="t">Why it matters:</span> no probability to argue with — every point cites a named rule, and they simply <b>add up</b>. That's what makes a decline or an SIU referral <b>defensible</b>.</div>
+  </section>
+
+  <!-- 5 AI EDGES: 3 ROLES -->
+  <section class="slide">
+    <div class="eyebrow">The “adaptive” half</div>
+    <h2>Three jobs for AI — none of them the verdict</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 300" role="img" aria-label="AI reads, writes, and evolves the rules">
+        <defs><marker id="ap2" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#a371f7"/></marker></defs>
+        <!-- row 1: READS -->
+        <text x="20" y="60" text-anchor="start" fill="#c8a6ff" font-size="13" font-weight="800">📥 READS</text>
+        <rect x="150" y="38" width="210" height="44" rx="10" class="d-box"/><text x="255" y="60" text-anchor="middle" class="d-t" font-size="12.5">📄 messy text / PDF</text>
+        <path d="M360,60 H470" stroke="#a371f7" stroke-width="2.4" fill="none" marker-end="url(#ap2)"/><text x="415" y="49" text-anchor="middle" fill="#c8a6ff" font-size="10.5">✨ structures</text>
+        <rect x="478" y="38" width="230" height="44" rx="10" fill="#0e1a12" stroke="#3fb950" stroke-width="1.6"/><text x="593" y="60" text-anchor="middle" fill="#eafff0" font-size="12.5">typed fields the rules read</text>
+        <!-- row 2: WRITES -->
+        <text x="20" y="150" text-anchor="start" fill="#c8a6ff" font-size="13" font-weight="800">📝 WRITES</text>
+        <rect x="150" y="128" width="210" height="44" rx="10" fill="#0e1a12" stroke="#3fb950" stroke-width="1.6"/><text x="255" y="150" text-anchor="middle" fill="#eafff0" font-size="12.5">🏛️ scored claim / ring</text>
+        <path d="M360,150 H470" stroke="#a371f7" stroke-width="2.4" fill="none" marker-end="url(#ap2)"/><text x="415" y="139" text-anchor="middle" fill="#c8a6ff" font-size="10.5">✨ writes</text>
+        <rect x="478" y="128" width="360" height="44" rx="10" class="d-box"/><text x="658" y="150" text-anchor="middle" class="d-t" font-size="12.5">🧠 why-flagged note · 🕸️ ring summary · 📄 SIU referral</text>
+        <!-- row 3: EVOLVES -->
+        <text x="20" y="240" text-anchor="start" fill="#c8a6ff" font-size="13" font-weight="800">🧪 EVOLVES</text>
+        <rect x="150" y="218" width="210" height="44" rx="10" class="d-box"/><text x="255" y="240" text-anchor="middle" class="d-t" font-size="12.5">📚 your claim book</text>
+        <path d="M360,240 H470" stroke="#a371f7" stroke-width="2.4" fill="none" marker-end="url(#ap2)"/><text x="415" y="229" text-anchor="middle" fill="#c8a6ff" font-size="10.5">✨ + 👤</text>
+        <rect x="478" y="218" width="360" height="44" rx="10" fill="#0e1a12" stroke="#3fb950" stroke-width="1.6"/><text x="658" y="240" text-anchor="middle" fill="#eafff0" font-size="12.5">🧪 new rule proposed → human-adopted into core</text>
+      </svg>
+    </div>
+    <div class="plain"><span class="t">In one line:</span> AI turns <b>messy → structured</b>, <b>structured → readable</b>, and <b>data → better rules</b> — the number in the middle stays pure maths.</div>
+  </section>
+
+  <!-- 6 FLYWHEEL -->
+  <section class="slide">
+    <div class="eyebrow">Why it compounds</div>
+    <h2>The rulebook gets smarter — <span class="k">safely</span></h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 372" role="img" aria-label="Human-in-the-loop rule improvement flywheel">
+        <defs><marker id="af" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#58a6ff"/></marker></defs>
+        <circle cx="520" cy="188" r="150" fill="none" stroke="#232a35" stroke-width="1.5" stroke-dasharray="4 6"/>
+        <!-- clockwise arcs between nodes -->
+        <g fill="none" stroke="#58a6ff" stroke-width="2.2" marker-end="url(#af)">
+          <path d="M556,52 A150 150 0 0 1 651,150"/>
+          <path d="M665,196 A150 150 0 0 1 596,315"/>
+          <path d="M520,338 A150 150 0 0 1 445,315"/>
+          <path d="M375,196 A150 150 0 0 1 389,150"/>
+          <path d="M403,66 A150 150 0 0 1 484,52"/>
+        </g>
+        <!-- nodes -->
+        <g text-anchor="middle">
+          <rect x="450" y="24" width="140" height="52" rx="12" class="d-box"/><text x="520" y="44" class="d-t" font-size="12.5">📚 your data</text><text x="520" y="61" class="d-s" font-size="10.5">claims to date</text>
+          <rect x="588" y="118" width="150" height="52" rx="12" class="d-box"/><text x="663" y="138" class="d-t" font-size="12.5">🤖 AI finds a gap</text><text x="663" y="155" class="d-s" font-size="10.5">signal you miss</text>
+          <rect x="576" y="290" width="150" height="52" rx="12" class="d-warn"/><text x="651" y="310" class="d-t" font-size="12.5">🧪 proposes a rule</text><text x="651" y="327" class="d-s" font-size="10.5">safe DSL, not code</text>
+          <rect x="314" y="290" width="150" height="52" rx="12" class="d-hi"/><text x="389" y="310" class="d-t" font-size="12.5">👤 human approves</text><text x="389" y="327" class="d-s" font-size="10.5">or rejects</text>
+          <rect x="302" y="118" width="150" height="52" rx="12" fill="#0e1a12" stroke="#3fb950" stroke-width="1.7"/><text x="377" y="138" fill="#eafff0" font-size="12.5" font-weight="800">📖 rulebook grows</text><text x="377" y="155" fill="#9fe3b3" font-size="10.5">catches more</text>
+        </g>
+        <text x="520" y="182" text-anchor="middle" fill="#8ecbff" font-size="14" font-weight="800">Rules that compound</text>
+        <text x="520" y="202" text-anchor="middle" class="d-s" font-size="12">no black-box retraining · no drift</text>
+      </svg>
+    </div>
+    <div class="plain"><span class="t">The moat:</span> most AI fraud tools drift and can't explain themselves. Here the engine <b>improves with your book</b>, every change is a human-approved, auditable rule.</div>
+  </section>
+
+  <!-- 7 FRAUD RINGS -->
+  <section class="slide">
+    <div class="eyebrow">What single-claim review can't see</div>
+    <h2>Organised fraud = <span class="k">connected</span> claims</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1000 330" role="img" aria-label="Three claimants tied together by shared details form a ring">
+        <rect x="120" y="16" width="760" height="292" rx="22" fill="none" stroke="#3a2030" stroke-width="2" stroke-dasharray="8 7" class="draw"/>
+        <text x="500" y="10" text-anchor="middle" fill="#ff7b72" font-size="13.5" font-weight="800">RING-1 · everyone tied together</text>
+        <g class="d-edge">
+          <line x1="230" y1="92" x2="500" y2="100"/><line x1="230" y1="248" x2="500" y2="100"/>
+          <line x1="230" y1="92" x2="500" y2="172"/><line x1="230" y1="248" x2="500" y2="172"/><line x1="770" y1="172" x2="500" y2="172"/>
+          <line x1="230" y1="92" x2="500" y2="244"/><line x1="230" y1="248" x2="500" y2="244"/><line x1="770" y1="172" x2="500" y2="244"/>
+        </g>
+        <rect x="442" y="80" width="116" height="40" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/><text x="500" y="95" text-anchor="middle" class="d-t" font-size="12">📞 555-0100</text><text x="500" y="110" text-anchor="middle" class="d-s" font-size="10">shared phone</text>
+        <rect x="442" y="152" width="116" height="40" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/><text x="500" y="167" text-anchor="middle" class="d-t" font-size="12">🔧 QuickFix</text><text x="500" y="182" text-anchor="middle" class="d-s" font-size="10">same shop</text>
+        <rect x="442" y="224" width="116" height="40" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/><text x="500" y="239" text-anchor="middle" class="d-t" font-size="12">⚖️ Shady &amp; Co</text><text x="500" y="254" text-anchor="middle" class="d-s" font-size="10">same lawyer</text>
+        <circle cx="230" cy="92" r="33" fill="#2a1417" stroke="#f85149" stroke-width="2.2"/><text x="230" y="88" text-anchor="middle" fill="#ff7b72" font-size="12.5" font-weight="800">Alice</text><text x="230" y="104" text-anchor="middle" class="d-s" font-size="10">own policy</text>
+        <circle cx="230" cy="248" r="33" fill="#2a1417" stroke="#f85149" stroke-width="2.2"/><text x="230" y="244" text-anchor="middle" fill="#ff7b72" font-size="12.5" font-weight="800">Bruno</text><text x="230" y="260" text-anchor="middle" class="d-s" font-size="10">own policy</text>
+        <circle cx="770" cy="172" r="33" fill="#2a1417" stroke="#f85149" stroke-width="2.2"/><text x="770" y="168" text-anchor="middle" fill="#ff7b72" font-size="12.5" font-weight="800">Carla</text><text x="770" y="184" text-anchor="middle" class="d-s" font-size="10">own policy</text>
+      </svg>
+    </div>
+    <div class="plain"><span class="t">In plain terms:</span> three different people, but the same phone, shop and lawyer. That shared box tying strangers together <b>is</b> the ring — and it's the highest-value fraud to catch.</div>
+  </section>
+
+  <!-- 8 ROI -->
+  <section class="slide">
+    <div class="eyebrow">Why it pays</div>
+    <h2>What it puts on the <span class="k">balance sheet</span></h2>
+    <div class="roi">
+      <div class="roic" style="grid-column:1/-1;text-align:center;background:linear-gradient(180deg,#10231a,#0e1a12);border-color:rgba(63,185,80,.4)">
+        <div class="lever" style="font-size:clamp(20px,2.6vw,28px);color:#5bd67c">💵 $0 AI running cost</div>
+        <p style="font-size:13px;color:#cfe9d6">Local <b>Ollama</b> on your own hardware — <b>no per-token API bills</b>, no cloud, and claim data <b>never leaves your network</b>. Add analysts &amp; claims for free.</p>
+      </div>
+      <div class="roic"><div class="i">🎯</div><div class="lever"><span class="up">↑</span> Detection</div><p>Catches organised rings &amp; threshold-gaming a single-claim model structurally can't see.</p></div>
+      <div class="roic"><div class="i">💸</div><div class="lever"><span class="down">↓</span> Leakage</div><p>Fraud runs ≈ <b>10% of claim payouts</b>¹ — every miss is pure, un-recoverable loss.</p></div>
+      <div class="roic"><div class="i">⏱️</div><div class="lever">Hours back</div><p>Notes, ring summaries &amp; SIU referrals are <b>auto-drafted</b>, not hand-written.</p></div>
+      <div class="roic"><div class="i">🎚️</div><div class="lever">Focus</div><p>A risk-ranked queue means adjusters work the <b>worst first</b> and skip the noise.</p></div>
+      <div class="roic"><div class="i">🛡️</div><div class="lever">Defensible</div><p>Explainable + reproducible → fewer <b>fines</b> and overturned declines at audit.</p></div>
+      <div class="roic"><div class="i">📈</div><div class="lever">Compounds</div><p>Rulebook grows with your book — <b>no ML retraining, no drift</b>, every change auditable.</p></div>
+    </div>
+    <p class="cap">¹ industry benchmark (Coalition Against Insurance Fraud). Figures illustrate the <b>value levers</b> this architecture unlocks — directional, not measured on the demo book.</p>
+  </section>
+
+  <!-- 9 CLOSE -->
+  <section class="slide">
+    <div class="eyebrow">The one-liner · thank you</div>
+    <h2>Team <span class="grad">Overwatch</span></h2>
+    <p class="closebig"><span class="grad">See the ring — not just the claim.</span></p>
+    <div class="recap">
+      <div><div class="b" style="color:#5bd67c">↑ catch</div><div class="l">rings &amp; hidden fraud</div></div>
+      <div><div class="b">⏱️ hours</div><div class="l">paperwork auto-drafted</div></div>
+      <div><div class="b" style="color:#8ecbff">🛡️ audit</div><div class="l">every decision defensible</div></div>
+      <div><div class="b" style="color:#c8a6ff">📈 grows</div><div class="l">with your data, safely</div></div>
+    </div>
+    <p class="foot" style="text-align:center;margin-top:20px">dashboard → <span class="kbd">http://localhost:8000</span> &nbsp;·&nbsp; pitch → <span class="kbd">/deck</span> &nbsp;·&nbsp; <b class="check">103/103</b> tests green</p>
+  </section>
+
+</div>
+
+<div id="dots"></div>
+<div id="count"></div>
+<div id="hint"><span class="kbd">←</span> <span class="kbd">→</span> navigate · <span class="kbd">F</span> fullscreen</div>
+
+<script>
+const slides = [...document.querySelectorAll('.slide')];
+const dots = document.getElementById('dots');
+slides.forEach((_,i)=>{ const b=document.createElement('b'); b.onclick=()=>go(i); dots.appendChild(b); });
+let cur = 0;
+function go(i){
+  cur = Math.max(0, Math.min(slides.length-1, i));
+  slides.forEach((s,k)=>s.classList.toggle('on', k===cur));
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on', k===cur));
+  document.getElementById('bar').style.width = ((cur+1)/slides.length*100)+'%';
+  document.getElementById('count').textContent = `${cur+1} / ${slides.length}`;
+}
+function next(){ go(cur+1); } function prev(){ go(cur-1); }
+document.addEventListener('keydown', e=>{
+  if(['ArrowRight',' ','PageDown','Enter'].includes(e.key)){ e.preventDefault(); next(); }
+  else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); prev(); }
+  else if(e.key==='Home'){ go(0); } else if(e.key==='End'){ go(slides.length-1); }
+  else if(e.key.toLowerCase()==='f'){ document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen(); }
+});
+document.getElementById('stage').addEventListener('click', e=>{
+  if(e.target.closest('#dots')) return;
+  (e.clientX > window.innerWidth/2) ? next() : prev();
+});
+go(0);
+</script>
+</body>
+</html>

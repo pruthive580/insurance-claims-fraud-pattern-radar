@@ -1,0 +1,326 @@
+[
+  {
+    "id": "C-101",
+    "claim_type": "auto_theft",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-1",
+      "name": "Alice Nardo",
+      "phone": "555-0100",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": "Shady & Co",
+      "policyholder_address": "12 Elm St, Lahore"
+    },
+    "policy": {
+      "number": "P-1",
+      "inception_date": "2026-07-20",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-07-25T02:30:00",
+    "reported_date": "2026-07-28",
+    "report_delay_reason": null,
+    "amount": 24000.0,
+    "risk_address": "Plot 9, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": false,
+    "repairer": "QuickFix Auto Body",
+    "invoices": [],
+    "photos": [
+      {
+        "id": "P-101a",
+        "phash": "ffe1c0803f8f1f0f",
+        "exif_datetime": "2026-07-25T03:00:00",
+        "exif_city": "Karachi"
+      }
+    ],
+    "documents": []
+  },
+  {
+    "id": "C-102",
+    "claim_type": "water_damage",
+    "segment": "property",
+    "party": {
+      "claimant_id": "CL-2",
+      "name": "Bruno Katz",
+      "phone": "555-0100",
+      "bank_account": "ACC-999",
+      "ip_address": null,
+      "attorney": "Shady & Co",
+      "policyholder_address": "88 Oak Ave, Karachi"
+    },
+    "policy": {
+      "number": "P-2",
+      "inception_date": "2025-01-05",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-06-01T14:00:00",
+    "reported_date": "2026-06-20",
+    "report_delay_reason": null,
+    "amount": 60000.0,
+    "risk_address": "88 Oak Ave, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": "QuickFix Auto Body",
+    "invoices": [
+      {
+        "number": "INV-1001",
+        "vendor": "AquaDry Restoration",
+        "issued_date": "2026-06-10",
+        "line_items": [
+          {
+            "description": "dry-out",
+            "amount": 30000.0
+          }
+        ]
+      },
+      {
+        "number": "INV-1002",
+        "vendor": "AquaDry Restoration",
+        "issued_date": "2026-06-10",
+        "line_items": [
+          {
+            "description": "repairs",
+            "amount": 30000.0
+          }
+        ]
+      }
+    ],
+    "photos": [
+      {
+        "id": "P-102a",
+        "phash": null,
+        "exif_datetime": "2026-06-01T15:00:00",
+        "exif_city": "Dubai"
+      }
+    ],
+    "documents": [
+      {
+        "field": "loss_date",
+        "source": "claim_form",
+        "value": "2026-06-01"
+      },
+      {
+        "field": "loss_date",
+        "source": "invoice",
+        "value": "2026-06-10"
+      },
+      {
+        "field": "loss_date",
+        "source": "pdf_metadata",
+        "value": "2026-06-18"
+      }
+    ]
+  },
+  {
+    "id": "C-103",
+    "claim_type": "auto_theft",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-3",
+      "name": "Carla Reyes",
+      "phone": null,
+      "bank_account": "ACC-999",
+      "ip_address": null,
+      "attorney": "Shady & Co",
+      "policyholder_address": "5 Pine Rd, Karachi"
+    },
+    "policy": {
+      "number": "P-3",
+      "inception_date": "2024-03-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": "2026-07-01",
+      "lapsed": true
+    },
+    "loss_datetime": "2026-07-10T21:00:00",
+    "reported_date": "2026-07-30",
+    "report_delay_reason": null,
+    "amount": 22000.0,
+    "risk_address": "5 Pine Rd, Karachi",
+    "demands_fast_cash": true,
+    "refused_inspection": true,
+    "police_report_present": false,
+    "repairer": "QuickFix Auto Body",
+    "invoices": [],
+    "photos": [
+      {
+        "id": "P-103a",
+        "phash": "ffe1c0803f8f1f0f",
+        "exif_datetime": "2026-07-10T21:30:00",
+        "exif_city": "Karachi"
+      }
+    ],
+    "documents": []
+  },
+  {
+    "id": "C-201",
+    "claim_type": "windshield",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-4",
+      "name": "Dan Wu",
+      "phone": "555-0201",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": null,
+      "policyholder_address": "7 Birch Ln, Karachi"
+    },
+    "policy": {
+      "number": "P-4",
+      "inception_date": "2025-09-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-02-03T10:00:00",
+    "reported_date": "2026-02-04",
+    "report_delay_reason": null,
+    "amount": 4875.0,
+    "risk_address": "7 Birch Ln, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": null,
+    "invoices": [],
+    "photos": [],
+    "documents": []
+  },
+  {
+    "id": "C-202",
+    "claim_type": "windshield",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-4",
+      "name": "Dan Wu",
+      "phone": "555-0201",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": null,
+      "policyholder_address": "7 Birch Ln, Karachi"
+    },
+    "policy": {
+      "number": "P-4",
+      "inception_date": "2025-09-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-05-12T10:00:00",
+    "reported_date": "2026-05-13",
+    "report_delay_reason": null,
+    "amount": 4900.0,
+    "risk_address": "7 Birch Ln, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": null,
+    "invoices": [],
+    "photos": [],
+    "documents": []
+  },
+  {
+    "id": "C-203",
+    "claim_type": "windshield",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-4",
+      "name": "Dan Wu",
+      "phone": "555-0201",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": null,
+      "policyholder_address": "7 Birch Ln, Karachi"
+    },
+    "policy": {
+      "number": "P-4",
+      "inception_date": "2025-09-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-07-20T10:00:00",
+    "reported_date": "2026-07-21",
+    "report_delay_reason": null,
+    "amount": 4850.0,
+    "risk_address": "7 Birch Ln, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": null,
+    "invoices": [],
+    "photos": [],
+    "documents": []
+  },
+  {
+    "id": "C-301",
+    "claim_type": "windshield",
+    "segment": "motor",
+    "party": {
+      "claimant_id": "CL-5",
+      "name": "Eve Moss",
+      "phone": "555-0301",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": null,
+      "policyholder_address": "1 Cedar Ct, Karachi"
+    },
+    "policy": {
+      "number": "P-5",
+      "inception_date": "2024-04-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-03-04T11:00:00",
+    "reported_date": "2026-03-04",
+    "report_delay_reason": null,
+    "amount": 320.0,
+    "risk_address": "1 Cedar Ct, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": null,
+    "invoices": [],
+    "photos": [],
+    "documents": []
+  },
+  {
+    "id": "C-302",
+    "claim_type": "water_damage",
+    "segment": "property",
+    "party": {
+      "claimant_id": "CL-6",
+      "name": "Frank Ott",
+      "phone": "555-0302",
+      "bank_account": null,
+      "ip_address": null,
+      "attorney": null,
+      "policyholder_address": "4 Maple Dr, Karachi"
+    },
+    "policy": {
+      "number": "P-6",
+      "inception_date": "2023-08-01",
+      "coverage_increase_date": null,
+      "reinstatement_date": null,
+      "lapsed": false
+    },
+    "loss_datetime": "2026-04-09T09:00:00",
+    "reported_date": "2026-04-11",
+    "report_delay_reason": "claimant hospitalised; documented",
+    "amount": 3000.0,
+    "risk_address": "4 Maple Dr, Karachi",
+    "demands_fast_cash": false,
+    "refused_inspection": false,
+    "police_report_present": true,
+    "repairer": null,
+    "invoices": [],
+    "photos": [],
+    "documents": []
+  }
+]

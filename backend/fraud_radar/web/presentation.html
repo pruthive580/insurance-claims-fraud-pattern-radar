@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fraud Pattern Radar — Team Overwatch</title>
+<!--
+  Self-contained pitch deck. Navigate: → / ← / Space / click, or the dots.
+  Press F for fullscreen. Team name (search: TEAM-NAME): Overwatch.
+  All diagrams are inline SVG — no external assets, renders fully offline.
+-->
+<style>
+  :root{
+    --bg:#0b0f16; --panel:#161b22; --line:#232a35; --ink:#e6edf3;
+    --muted:#8b949e; --low:#2ea043; --med:#d29922; --high:#f85149;
+    --accent:#58a6ff; --accent2:#a371f7; --green:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    font:16px/1.55 -apple-system,BlinkMacSystemFont,Segoe UI,Roboto,sans-serif;
+    background:radial-gradient(1200px 700px at 80% -10%, #14202f 0%, var(--bg) 55%);
+    color:var(--ink); overflow:hidden;
+  }
+  #stage{height:100vh;width:100vw;position:relative}
+  .slide{
+    position:absolute; inset:0; display:none; flex-direction:column;
+    justify-content:center; padding:5vh 7vw; opacity:0;
+    transition:opacity .4s ease; overflow:auto;
+  }
+  .slide.on{display:flex; opacity:1; animation:rise .5s ease}
+  @keyframes rise{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  h1{font-size:clamp(34px,6vw,66px);line-height:1.05;letter-spacing:-1px;font-weight:800}
+  h2{font-size:clamp(22px,3.2vw,38px);font-weight:800;letter-spacing:-.5px;margin-bottom:8px}
+  h2 .k{color:var(--accent)}
+  p.lead{font-size:clamp(16px,1.7vw,22px);color:#cdd9e5;max-width:62ch}
+  .grad{background:linear-gradient(100deg,var(--accent),var(--accent2) 60%,var(--high));
+        -webkit-background-clip:text;background-clip:text;color:transparent}
+  .eyebrow{color:var(--accent);font-weight:700;letter-spacing:3px;text-transform:uppercase;
+           font-size:13px;margin-bottom:14px}
+  .muted{color:var(--muted)}
+  .tag{display:inline-block;border:1px solid var(--line);border-radius:20px;padding:4px 12px;
+       font-size:13px;color:var(--muted);margin-right:8px}
+  ul.big{list-style:none;margin-top:8px}
+  ul.big li{font-size:clamp(15px,1.7vw,20px);padding:8px 0 8px 34px;position:relative;color:#dfe7ef}
+  ul.big li::before{content:"→";position:absolute;left:0;color:var(--accent);font-weight:800}
+  .cards{display:grid;gap:16px;margin-top:10px}
+  .c3{grid-template-columns:repeat(3,1fr)}
+  .c2{grid-template-columns:repeat(2,1fr)}
+  .card{background:linear-gradient(180deg,#141b24,#10151d);border:1px solid var(--line);
+        border-radius:14px;padding:18px 20px}
+  .card h3{font-size:18px;margin-bottom:6px}
+  .card p{color:var(--muted);font-size:14px}
+  .pill{display:inline-block;font-size:12px;font-weight:700;border-radius:6px;padding:2px 8px}
+  .p-low{background:rgba(46,160,67,.16);color:#5bd67c;border:1px solid rgba(46,160,67,.4)}
+  .p-med{background:rgba(210,153,34,.16);color:#e3b341;border:1px solid rgba(210,153,34,.4)}
+  .p-high{background:rgba(248,81,73,.16);color:#ff7b72;border:1px solid rgba(248,81,73,.4)}
+  table{border-collapse:collapse;width:100%;margin-top:8px;font-size:clamp(13px,1.4vw,17px)}
+  th,td{text-align:left;padding:11px 14px;border-bottom:1px solid var(--line)}
+  th{color:var(--muted);font-weight:600;font-size:13px;text-transform:uppercase;letter-spacing:1px}
+  .rulegrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+  .rule{background:#10151d;border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .rule .id{font-weight:800;color:var(--accent)}
+  .rule .pts{float:right;color:var(--high);font-weight:800;font-size:13px}
+  .rule .d{color:var(--muted);font-size:12.5px;margin-top:3px;line-height:1.35}
+  .cat-id{border-left:3px solid var(--accent)} .cat-tf{border-left:3px solid var(--green)}
+  .cat-am{border-left:3px solid var(--med)} .cat-be{border-left:3px solid var(--accent2)}
+  .cat-nw{border-left:3px solid var(--high)} .cat-dt{border-left:3px solid #db6d28}
+  .stat{display:flex;gap:34px;margin-top:18px;flex-wrap:wrap}
+  .stat .s{font-size:clamp(28px,4vw,50px);font-weight:800}
+  .stat .l{color:var(--muted);font-size:14px}
+  .check{color:#5bd67c;font-weight:800}
+  .kbd{border:1px solid var(--line);border-bottom-width:2px;border-radius:6px;padding:1px 7px;
+       font-size:12px;color:var(--muted);background:#0d1117}
+  .foot{margin-top:18px;color:var(--muted);font-size:13.5px}
+  /* diagrams */
+  .diagram{width:100%;max-width:1060px;margin:6px auto 0}
+  .diagram svg{width:100%;height:auto;display:block}
+  .cap{color:var(--muted);font-size:13.5px;margin-top:12px;text-align:center;
+       max-width:76ch;margin-left:auto;margin-right:auto}
+  svg text{font-family:inherit;dominant-baseline:middle}
+  .d-box{fill:#10151d;stroke:#2a3340;stroke-width:1.5}
+  .d-hi{fill:#0f1a27;stroke:var(--accent);stroke-width:1.8}
+  .d-warn{fill:#1a1526;stroke:var(--accent2);stroke-width:1.5;stroke-dasharray:5 4}
+  .d-t{fill:var(--ink);font-weight:800}
+  .d-s{fill:var(--muted)}
+  .d-edge{stroke:#3b4553;stroke-width:2;fill:none}
+  .d-flow{stroke:var(--accent);stroke-width:2.2;fill:none}
+  .d-ret{stroke:var(--green);stroke-width:2;fill:none;stroke-dasharray:6 5}
+  /* score build-up bar (pipeline slide) */
+  .buildup{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin-top:14px}
+  .chip{font-size:13px;font-weight:700;border-radius:7px;padding:5px 9px;border:1px solid var(--line);
+        background:#10151d}
+  .chip b{color:var(--high)}
+  .sum{font-size:20px;font-weight:800;margin-left:4px}
+  /* gauge */
+  .gauge-wrap{max-width:1000px;margin:14px auto 0}
+  /* ring animation */
+  .pulse{animation:pulse 2.2s ease-in-out infinite}
+  @keyframes pulse{0%,100%{opacity:.55}50%{opacity:1}}
+  .draw{stroke-dasharray:6 6;animation:march 1.1s linear infinite}
+  @keyframes march{to{stroke-dashoffset:-24}}
+  /* tech badges + closing pillars */
+  .badges{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px;justify-content:center}
+  .badge{font-size:13px;font-weight:600;border:1px solid var(--line);border-radius:8px;
+         padding:6px 12px;background:#10151d;color:#cdd9e5}
+  .badge b{color:var(--accent)}
+  .pillars{display:flex;flex-wrap:wrap;gap:12px;margin-top:20px}
+  .pillar{flex:1;min-width:150px;border:1px solid var(--line);border-radius:13px;padding:16px;
+          background:linear-gradient(180deg,#141b24,#10151d);text-align:center}
+  .pillar .i{font-size:24px}
+  .pillar b{display:block;margin-top:6px;font-size:15px}
+  .pillar span{color:var(--muted);font-size:12.5px}
+  .closeline{font-size:clamp(30px,5vw,60px);font-weight:800;letter-spacing:-1px;margin-top:4px}
+  .tstats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-top:16px}
+  .tstat{border:1px solid var(--line);border-radius:13px;padding:13px 10px;text-align:center;
+         background:linear-gradient(180deg,#17202c,#0f141c);position:relative;overflow:hidden}
+  .tstat::before{content:"";position:absolute;left:0;top:0;right:0;height:2px;
+         background:linear-gradient(90deg,var(--accent),var(--accent2))}
+  .tstat .b{font-size:clamp(20px,2.8vw,30px);font-weight:800;line-height:1}
+  .tstat .l{color:var(--muted);font-size:11.5px;margin-top:5px}
+  /* print / export to PDF — every slide on its own 16:9 page */
+  @media print{
+    @page{ size:13.333in 7.5in; margin:0; }
+    html,body{ height:auto !important; overflow:visible !important; background:#0b0f16 !important;
+               -webkit-print-color-adjust:exact !important; print-color-adjust:exact !important; }
+    #bar,#dots,#count,#hint,.brandbar{ display:none !important; }
+    #stage{ height:auto !important; position:static !important; }
+    .slide{ position:relative !important; inset:auto !important; display:flex !important; opacity:1 !important;
+            width:13.333in !important; height:7.5in !important; overflow:hidden !important;
+            page-break-after:always; break-after:page; }
+    .slide:last-child{ page-break-after:auto; break-after:auto; }
+    *{ animation:none !important; }
+  }
+  /* chrome */
+  #bar{position:fixed;left:0;top:0;height:3px;background:linear-gradient(90deg,var(--accent),var(--high));
+       width:0;transition:width .3s;z-index:20}
+  #dots{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20}
+  #dots b{width:9px;height:9px;border-radius:50%;background:#2b333f;cursor:pointer;transition:.2s}
+  #dots b.on{background:var(--accent);transform:scale(1.25)}
+  #count{position:fixed;bottom:14px;right:22px;color:var(--muted);font-size:13px;z-index:20}
+  #hint{position:fixed;bottom:14px;left:22px;color:var(--muted);font-size:12px;z-index:20}
+  .brandbar{position:fixed;top:14px;left:22px;color:var(--muted);font-size:13px;z-index:20;letter-spacing:.4px}
+  .brandbar b{color:var(--accent2)}
+</style>
+</head>
+<body>
+<div id="bar"></div>
+<div class="brandbar">🛰️ Fraud Pattern Radar &nbsp;·&nbsp; Team <b>Overwatch</b></div>
+<div id="stage">
+
+  <!-- 1 — TITLE -->
+  <section class="slide">
+    <div class="eyebrow">Hackathon 2026 · Use Case #12 · Insurance / SIU</div>
+    <h1>Fraud Pattern Radar<br><span class="grad">catch the whole ring — and prove it.</span></h1>
+    <p class="lead" style="margin-top:20px">Explainable, real-time claim-fraud scoring with organised-ring detection.
+      Every flag traces to a named rule — the <b>maths</b> decides; AI just helps at the edges.</p>
+    <div style="margin-top:24px">
+      <span class="tag">Team <b style="color:var(--ink)">Overwatch</b></span><!-- TEAM-NAME -->
+      <span class="tag">Deterministic-first</span>
+      <span class="tag">Network-aware</span>
+      <span class="tag">Runs offline</span>
+    </div>
+  </section>
+
+  <!-- 2 — PROBLEM (two-panel diagram) -->
+  <section class="slide">
+    <div class="eyebrow">The problem</div>
+    <h2>Fraud hides <span class="k">between</span> claims, not inside one</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 380" role="img" aria-label="Single-claim view vs network view">
+        <!-- divider -->
+        <line x1="520" y1="40" x2="520" y2="350" stroke="#232a35" stroke-width="1.5" stroke-dasharray="4 5"/>
+        <text x="250" y="26" text-anchor="middle" class="d-s" font-size="15">One claim at a time — each looks clean</text>
+        <text x="790" y="26" text-anchor="middle" class="d-s" font-size="15">Across the book — the ring appears</text>
+
+        <!-- LEFT: three isolated PASS cards -->
+        <g>
+          <rect x="70"  y="70" width="150" height="90" rx="12" class="d-box"/>
+          <text x="145" y="100" text-anchor="middle" class="d-t" font-size="15">Claim C-101</text>
+          <text x="145" y="128" text-anchor="middle" fill="#5bd67c" font-size="15">✓ looks legitimate</text>
+          <rect x="280" y="150" width="150" height="90" rx="12" class="d-box"/>
+          <text x="355" y="180" text-anchor="middle" class="d-t" font-size="15">Claim C-102</text>
+          <text x="355" y="208" text-anchor="middle" fill="#5bd67c" font-size="15">✓ looks legitimate</text>
+          <rect x="120" y="240" width="150" height="90" rx="12" class="d-box"/>
+          <text x="195" y="270" text-anchor="middle" class="d-t" font-size="15">Claim C-103</text>
+          <text x="195" y="298" text-anchor="middle" fill="#5bd67c" font-size="15">✓ looks legitimate</text>
+        </g>
+
+        <!-- RIGHT: same three linked to a flagged repairer -->
+        <g>
+          <!-- edges -->
+          <line x1="690" y1="110" x2="790" y2="205" class="d-edge"/>
+          <line x1="915" y1="110" x2="790" y2="205" class="d-edge"/>
+          <line x1="700" y1="300" x2="790" y2="205" class="d-edge"/>
+          <!-- claimant nodes -->
+          <circle cx="690" cy="110" r="30" fill="#2a1417" stroke="var(--high)" stroke-width="2"/>
+          <text x="690" y="110" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">C-101</text>
+          <circle cx="915" cy="110" r="30" fill="#2a1417" stroke="var(--high)" stroke-width="2"/>
+          <text x="915" y="110" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">C-102</text>
+          <circle cx="700" cy="300" r="30" fill="#2a1417" stroke="var(--high)" stroke-width="2"/>
+          <text x="700" y="300" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">C-103</text>
+          <!-- shared repairer -->
+          <rect x="740" y="180" width="100" height="52" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.8"/>
+          <text x="790" y="200" text-anchor="middle" class="d-t" font-size="13">🔧 QuickFix</text>
+          <text x="790" y="218" text-anchor="middle" class="d-s" font-size="11">flagged repairer</text>
+        </g>
+      </svg>
+    </div>
+    <p class="cap">Same three claims, three different policyholders. Reviewed alone, each passes.
+      Only the <b style="color:#ff7b72">network</b> reveals they all funnel through one flagged repair shop.</p>
+  </section>
+
+  <!-- 3 — ARCHITECTURE (system diagram) -->
+  <section class="slide">
+    <div class="eyebrow">Architecture</div>
+    <h2>Small, layered, <span class="k">deterministic-core</span> — dataset-driven</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1060 430" role="img" aria-label="System architecture">
+        <defs>
+          <marker id="ah" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#58a6ff"/>
+          </marker>
+          <marker id="ahg" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#3fb950"/>
+          </marker>
+        </defs>
+
+        <!-- A: Browser SPA -->
+        <rect x="30" y="70" width="210" height="230" rx="14" class="d-hi"/>
+        <text x="135" y="96" text-anchor="middle" class="d-t" font-size="16">Browser SPA</text>
+        <text x="135" y="120" text-anchor="middle" class="d-s" font-size="12.5">zero-build · vanilla JS</text>
+        <g font-size="12.5" fill="#cdd9e5" text-anchor="middle">
+          <text x="135" y="152">▸ ranked risk queue</text>
+          <text x="135" y="178">▸ fraud-ring graph</text>
+          <text x="135" y="204">▸ why-flagged panel</text>
+          <text x="135" y="230">▸ live FNOL console</text>
+        </g>
+
+        <!-- B: FastAPI -->
+        <rect x="330" y="105" width="180" height="160" rx="14" class="d-box"/>
+        <text x="420" y="130" text-anchor="middle" class="d-t" font-size="16">FastAPI</text>
+        <g font-size="12.5" fill="#8b949e" text-anchor="middle">
+          <text x="420" y="158">/api/claims</text>
+          <text x="420" y="180">/api/graph</text>
+          <text x="420" y="202">/api/score</text>
+          <text x="420" y="224">/api/reset</text>
+        </g>
+
+        <!-- C: scoring.py orchestrator -->
+        <rect x="600" y="50" width="270" height="300" rx="14" class="d-hi"/>
+        <text x="735" y="76" text-anchor="middle" class="d-t" font-size="16">scoring.py — orchestrator</text>
+        <text x="735" y="96" text-anchor="middle" class="d-s" font-size="12">context → signals → rules → band → note</text>
+        <rect x="620" y="118" width="230" height="52" rx="10" class="d-box"/>
+        <text x="735" y="138" text-anchor="middle" class="d-t" font-size="14">rules.py</text>
+        <text x="735" y="156" text-anchor="middle" class="d-s" font-size="12">R1–R16 · points + reason</text>
+        <rect x="620" y="184" width="230" height="52" rx="10" class="d-box"/>
+        <text x="735" y="204" text-anchor="middle" class="d-t" font-size="14">graph.py</text>
+        <text x="735" y="222" text-anchor="middle" class="d-s" font-size="12">rings + cross-claim signals</text>
+        <rect x="620" y="246" width="230" height="60" rx="10" class="d-warn"/>
+        <text x="735" y="265" text-anchor="middle" class="d-t" font-size="13.5">llm.py · <tspan fill="#a371f7">🧪 Rule Lab</tspan></text>
+        <text x="735" y="283" text-anchor="middle" class="d-s" font-size="10.5">monitors the engine → suggests</text>
+        <text x="735" y="297" text-anchor="middle" class="d-s" font-size="10.5">missed rules · human-approved</text>
+
+        <!-- D: dataset -->
+        <path d="M930,150 h100 v130 a50,14 0 0 1 -100,0 v-130 Z" class="d-box"/>
+        <ellipse cx="980" cy="150" rx="50" ry="14" class="d-box"/>
+        <text x="980" y="200" text-anchor="middle" class="d-t" font-size="13">claims.json</text>
+        <text x="980" y="222" text-anchor="middle" class="d-t" font-size="13">config.json</text>
+        <text x="980" y="250" text-anchor="middle" class="d-s" font-size="11">the dataset</text>
+
+        <!-- flows -->
+        <path d="M240,150 H326" class="d-flow" marker-end="url(#ah)"/>
+        <text x="283" y="138" text-anchor="middle" class="d-s" font-size="11">HTTP · JSON</text>
+        <path d="M510,170 H596" class="d-flow" marker-end="url(#ah)"/>
+        <text x="553" y="158" text-anchor="middle" class="d-s" font-size="11">claim</text>
+        <path d="M870,200 H926" class="d-flow" marker-end="url(#ah)"/>
+        <text x="898" y="188" text-anchor="middle" class="d-s" font-size="11">reads</text>
+        <!-- return -->
+        <path d="M600,330 C420,395 300,395 135,330" class="d-ret" marker-end="url(#ahg)"/>
+        <text x="360" y="392" text-anchor="middle" fill="#5bd67c" font-size="11.5">score · band · reasons · ring</text>
+      </svg>
+    </div>
+    <p class="cap">Scoring is <b>100% reproducible</b> — the AI reads messy claims, writes notes / referrals, and
+      <b>monitors the engine to suggest missed rules a human approves</b> (🧪 Rule Lab), all on <b>local Ollama</b>.
+      Swap <code>claims.json</code> for real data, <b>zero code changes</b>.</p>
+  </section>
+
+  <!-- 4 — PIPELINE (flow + worked score build-up) -->
+  <section class="slide">
+    <div class="eyebrow">How it works</div>
+    <h2>One claim → a routed, explained decision</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1060 150" role="img" aria-label="Scoring pipeline">
+        <defs>
+          <marker id="pf" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#58a6ff"/>
+          </marker>
+        </defs>
+        <!-- 6 stages -->
+        <g>
+          <!-- stage template repeated -->
+          <rect x="10"  y="45" width="150" height="60" rx="11" class="d-box"/>
+          <text x="85"  y="68" text-anchor="middle" class="d-t" font-size="13.5">Intake / FNOL</text>
+          <text x="85"  y="87" text-anchor="middle" class="d-s" font-size="11.5">API or live console</text>
+
+          <rect x="185" y="45" width="150" height="60" rx="11" class="d-box"/>
+          <text x="260" y="68" text-anchor="middle" class="d-t" font-size="13.5">Context</text>
+          <text x="260" y="87" text-anchor="middle" class="d-s" font-size="11.5">percentiles · thresholds</text>
+
+          <rect x="360" y="45" width="150" height="60" rx="11" class="d-box"/>
+          <text x="435" y="68" text-anchor="middle" class="d-t" font-size="13.5">Cross-claim</text>
+          <text x="435" y="87" text-anchor="middle" class="d-s" font-size="11.5">rings · dup photos</text>
+
+          <rect x="535" y="45" width="150" height="60" rx="11" class="d-hi"/>
+          <text x="610" y="68" text-anchor="middle" class="d-t" font-size="13.5">Rules R1–R16</text>
+          <text x="610" y="87" text-anchor="middle" class="d-s" font-size="11.5">points + reason</text>
+
+          <rect x="710" y="45" width="150" height="60" rx="11" class="d-box"/>
+          <text x="785" y="68" text-anchor="middle" class="d-t" font-size="13.5">Band</text>
+          <text x="785" y="87" text-anchor="middle" class="d-s" font-size="11.5">Low / Med / High</text>
+
+          <rect x="885" y="45" width="160" height="60" rx="11" class="d-box"/>
+          <text x="965" y="68" text-anchor="middle" class="d-t" font-size="13.5">Route + Note</text>
+          <text x="965" y="87" text-anchor="middle" class="d-s" font-size="11.5">action · narrative</text>
+        </g>
+        <!-- connectors -->
+        <g class="d-flow" marker-end="url(#pf)">
+          <path d="M160,75 H182"/><path d="M335,75 H357"/><path d="M510,75 H532"/>
+          <path d="M685,75 H707"/><path d="M860,75 H882"/>
+        </g>
+      </svg>
+    </div>
+    <p class="foot" style="margin-top:8px">Worked example — the walk-in claim, points accumulating to a score:</p>
+    <div class="buildup">
+      <span class="chip">R1 <b>+15</b></span>
+      <span class="chip">R12 <b>+15</b></span>
+      <span class="chip">R13 <b>+10</b></span>
+      <span class="chip">R8 <b>+12</b></span>
+      <span class="chip">R7 <b>+10</b></span>
+      <span class="chip">R6 <b>+5</b></span>
+      <span class="chip">R11 <b>+7</b></span>
+      <span class="sum">= 74</span>
+      <span class="pill p-high" style="margin-left:6px;font-size:14px;padding:4px 10px">HIGH → SIU</span>
+    </div>
+    <p class="cap">The score is always the <b>exact sum of fired-rule points</b> — additive, reproducible, and auditable line by line.</p>
+  </section>
+
+  <!-- 5 — THE 16 RULES -->
+  <section class="slide">
+    <div class="eyebrow">The engine</div>
+    <h2>16 rules across 6 fraud categories</h2>
+    <div class="rulegrid" id="ruleGrid"></div>
+    <p class="cap">Colour = category · number = points. Every rule is tested positive, negative, <b>and at its exact boundary</b>.</p>
+  </section>
+
+  <!-- 6 — BANDS + GAUGE -->
+  <section class="slide">
+    <div class="eyebrow">Score bands → action</div>
+    <h2>The score drives a concrete routing decision</h2>
+    <div class="gauge-wrap diagram">
+      <svg viewBox="0 0 1000 150" role="img" aria-label="Score band gauge">
+        <!-- zones -->
+        <rect x="40" y="70" width="252" height="26" rx="6" fill="rgba(46,160,67,.35)"/>
+        <rect x="292" y="70" width="270" height="26" fill="rgba(210,153,34,.35)"/>
+        <rect x="562" y="70" width="398" height="26" rx="6" fill="rgba(248,81,73,.35)"/>
+        <!-- scale ticks 0..100 -->
+        <g class="d-s" font-size="12" text-anchor="middle">
+          <text x="40"  y="120">0</text>
+          <text x="292" y="120">30</text>
+          <text x="562" y="120">60</text>
+          <text x="960" y="120">100</text>
+        </g>
+        <text x="166" y="58" text-anchor="middle" fill="#5bd67c" font-size="14" font-weight="800">LOW · auto-adjudicate</text>
+        <text x="427" y="58" text-anchor="middle" fill="#e3b341" font-size="14" font-weight="800">MEDIUM · adjuster review</text>
+        <text x="761" y="58" text-anchor="middle" fill="#ff7b72" font-size="14" font-weight="800">HIGH · route to SIU</text>
+        <!-- markers -->
+        <g>
+          <!-- C-201 = 24 -->
+          <polygon points="241,100 235,112 247,112" fill="#5bd67c"/>
+          <text x="241" y="132" text-anchor="middle" class="d-s" font-size="11">C-201·24</text>
+          <!-- C-202 = 34 -->
+          <polygon points="326,100 320,112 332,112" fill="#e3b341"/>
+          <text x="326" y="132" text-anchor="middle" class="d-s" font-size="11">C-202·34</text>
+          <!-- walk-in = 74 -->
+          <polygon points="700,100 693,113 707,113" fill="#ff7b72"/>
+          <text x="700" y="132" text-anchor="middle" fill="#ff7b72" font-size="11" font-weight="700">walk-in·74</text>
+          <!-- C-101 = 82 -->
+          <polygon points="768,100 761,113 775,113" fill="#ff7b72"/>
+          <text x="768" y="132" text-anchor="middle" class="d-s" font-size="11">C-101·82</text>
+        </g>
+      </svg>
+    </div>
+    <table style="max-width:900px;margin-left:auto;margin-right:auto">
+      <tr><th>Band</th><th>Score</th><th>Routing action</th></tr>
+      <tr><td><span class="pill p-low">LOW</span></td><td>0 – 29</td><td>Straight-through / auto-adjudicate</td></tr>
+      <tr><td><span class="pill p-med">MEDIUM</span></td><td>30 – 59</td><td>Adjuster review with reason codes</td></tr>
+      <tr><td><span class="pill p-high">HIGH</span></td><td>≥ 60</td><td>Route to SIU queue — top of the investigator list</td></tr>
+    </table>
+    <p class="cap">Straight from the #12 / #48 rule card. This one number powers both the <b>ranked queue</b> and the <b>auto-routing</b>.</p>
+  </section>
+
+  <!-- 7 — RING (network diagram, the WOW) -->
+  <section class="slide">
+    <div class="eyebrow">The centrepiece</div>
+    <h2>Fraud-ring detection via <span class="k">network analysis</span></h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1000 400" role="img" aria-label="Fraud ring network">
+        <!-- ring boundary -->
+        <rect x="120" y="35" width="760" height="330" rx="24" fill="none" stroke="#3a2030"
+              stroke-width="2" stroke-dasharray="8 7" class="draw"/>
+        <text x="500" y="26" text-anchor="middle" fill="#ff7b72" font-size="14" font-weight="800">RING-1 · one connected component</text>
+
+        <!-- edges (draw first, under nodes) -->
+        <g class="d-edge">
+          <!-- phone: C-101, C-102 -->
+          <line x1="250" y1="110" x2="500" y2="120"/>
+          <line x1="250" y1="300" x2="500" y2="120"/>
+          <!-- repairer: all three -->
+          <line x1="250" y1="110" x2="500" y2="205"/>
+          <line x1="250" y1="300" x2="500" y2="205"/>
+          <line x1="760" y1="205" x2="500" y2="205"/>
+          <!-- attorney: all three -->
+          <line x1="250" y1="110" x2="500" y2="290"/>
+          <line x1="250" y1="300" x2="500" y2="290"/>
+          <line x1="760" y1="205" x2="500" y2="290"/>
+        </g>
+
+        <!-- shared identifier nodes -->
+        <g>
+          <rect x="440" y="98" width="120" height="44" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="500" y="114" text-anchor="middle" class="d-t" font-size="12.5">📞 555-0100</text>
+          <text x="500" y="131" text-anchor="middle" class="d-s" font-size="10.5">shared phone</text>
+
+          <rect x="440" y="183" width="120" height="44" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="500" y="199" text-anchor="middle" class="d-t" font-size="12.5">🔧 QuickFix</text>
+          <text x="500" y="216" text-anchor="middle" class="d-s" font-size="10.5">flagged repairer</text>
+
+          <rect x="440" y="268" width="120" height="44" rx="10" fill="#0f1a27" stroke="var(--accent)" stroke-width="1.6"/>
+          <text x="500" y="284" text-anchor="middle" class="d-t" font-size="12.5">⚖️ Shady &amp; Co</text>
+          <text x="500" y="301" text-anchor="middle" class="d-s" font-size="10.5">shared attorney</text>
+        </g>
+
+        <!-- claimant nodes -->
+        <g>
+          <circle cx="250" cy="110" r="36" fill="#2a1417" stroke="var(--high)" stroke-width="2.2"/>
+          <text x="250" y="103" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">Alice</text>
+          <text x="250" y="120" text-anchor="middle" class="d-s" font-size="11">C-101 · 82</text>
+
+          <circle cx="250" cy="300" r="36" fill="#2a1417" stroke="var(--high)" stroke-width="2.2"/>
+          <text x="250" y="293" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">Bruno</text>
+          <text x="250" y="310" text-anchor="middle" class="d-s" font-size="11">C-102 · 69</text>
+
+          <circle cx="760" cy="205" r="36" fill="#2a1417" stroke="var(--high)" stroke-width="2.2"/>
+          <text x="760" y="198" text-anchor="middle" fill="#ff7b72" font-size="13" font-weight="800">Carla</text>
+          <text x="760" y="215" text-anchor="middle" class="d-s" font-size="11">C-103 · 75</text>
+        </g>
+
+        <!-- legend -->
+        <g font-size="12">
+          <circle cx="150" cy="384" r="7" fill="#2a1417" stroke="var(--high)" stroke-width="2"/>
+          <text x="164" y="384" class="d-s" text-anchor="start">distinct claimant (own policy)</text>
+          <rect x="470" y="377" width="14" height="14" rx="3" fill="#0f1a27" stroke="var(--accent)"/>
+          <text x="492" y="384" class="d-s" text-anchor="start">shared identifier → edge</text>
+        </g>
+      </svg>
+    </div>
+    <p class="cap">Index every identifier; a value spanning <b>≥ 2 distinct claimants</b> becomes an edge. Rings are the
+      <b>connected components</b>. Same-claimant reuse is <i>not</i> a ring — that's the serial-claimant rule (R5).
+      In the dashboard this renders <b>live as an entity graph</b>: every shared detail (📞/🔧/⚖️) is its own node,
+      so a box wired to several claimants <i>is</i> the ring — you see it, you don't decode it.</p>
+  </section>
+
+  <!-- 8 — FNOL LIVE (data-flow diagram) -->
+  <section class="slide">
+    <div class="eyebrow">Live at intake</div>
+    <h2>A brand-new claim joins the ring <span class="k">in real time</span></h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1060 320" role="img" aria-label="Live FNOL data flow">
+        <defs>
+          <marker id="ff" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto">
+            <path d="M0,0 L7,3 L0,6 Z" fill="#58a6ff"/>
+          </marker>
+        </defs>
+        <!-- walk-in claim -->
+        <rect x="30" y="95" width="200" height="130" rx="13" class="d-warn"/>
+        <text x="130" y="122" text-anchor="middle" class="d-t" font-size="15">Walk-in claim</text>
+        <text x="130" y="140" text-anchor="middle" class="d-s" font-size="11.5">never seen before · LIVE-1</text>
+        <g font-size="12" fill="#cdd9e5" text-anchor="middle">
+          <text x="130" y="166">📞 555-0100</text>
+          <text x="130" y="188">🔧 QuickFix</text>
+          <text x="130" y="210">$24,500 · 3 days old</text>
+        </g>
+
+        <!-- arrow -->
+        <path d="M232,160 H322" class="d-flow" marker-end="url(#ff)"/>
+        <text x="277" y="146" text-anchor="middle" class="d-s" font-size="12">POST /api/claims</text>
+
+        <!-- server engine -->
+        <rect x="330" y="90" width="270" height="140" rx="13" class="d-hi"/>
+        <text x="465" y="120" text-anchor="middle" class="d-t" font-size="15">Re-score whole book</text>
+        <text x="465" y="146" text-anchor="middle" class="d-s" font-size="12.5">rebuild identifier graph</text>
+        <text x="465" y="172" text-anchor="middle" class="d-s" font-size="12.5">recompute connected components</text>
+        <text x="465" y="200" text-anchor="middle" class="d-s" font-size="12.5">apply R1–R16 + band</text>
+
+        <!-- two outputs -->
+        <path d="M600,130 H700" class="d-flow" marker-end="url(#ff)"/>
+        <path d="M600,190 H700" class="d-flow" marker-end="url(#ff)"/>
+
+        <!-- output 1: result -->
+        <rect x="710" y="70" width="320" height="90" rx="13" class="d-box"/>
+        <text x="740" y="102" text-anchor="start" fill="#ff7b72" font-size="34" font-weight="800">74</text>
+        <text x="800" y="94"  text-anchor="start" class="d-t" font-size="14">HIGH → SIU queue</text>
+        <text x="800" y="116" text-anchor="start" fill="#ff7b72" font-size="13" font-weight="700">pulled into RING-1</text>
+        <text x="740" y="140" text-anchor="start" class="d-s" font-size="12">7 rules · Σ points = 74 · full reasons</text>
+
+        <!-- output 2: graph join -->
+        <rect x="710" y="180" width="320" height="110" rx="13" class="d-box"/>
+        <text x="870" y="200" text-anchor="middle" class="d-s" font-size="12">node animates into the graph</text>
+        <line x1="800" y1="245" x2="880" y2="245" class="d-edge draw"/>
+        <line x1="960" y1="245" x2="880" y2="245" class="d-edge draw"/>
+        <circle cx="800" cy="245" r="14" fill="#2a1417" stroke="var(--high)" stroke-width="1.8"/>
+        <circle cx="960" cy="245" r="14" fill="#2a1417" stroke="var(--high)" stroke-width="1.8"/>
+        <circle cx="880" cy="245" r="16" fill="#132132" stroke="var(--accent)" stroke-width="2" class="pulse"/>
+        <text x="880" y="245" text-anchor="middle" fill="#8ecbff" font-size="10" font-weight="700">LIVE</text>
+        <text x="870" y="278" text-anchor="middle" fill="#8ecbff" font-size="11.5">joins RING-1 by shared phone + repairer</text>
+      </svg>
+    </div>
+    <p class="cap">Detection is <b>dynamic, not precomputed</b> — the ring genuinely re-links the moment the claim lands.
+      In the dashboard, click <span class="kbd">＋ Score claim at intake</span> → <b>🔴 Ring member</b> to show it live.</p>
+  </section>
+
+  <!-- 8b — AI VALUE-ADD -->
+  <section class="slide">
+    <div class="eyebrow">AI at the edges</div>
+    <h2>AI <span class="k">wraps</span> the engine — it never decides the verdict</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1060 452" role="img" aria-label="Deterministic core, AI at the edges">
+        <defs>
+          <marker id="ap" markerWidth="10" markerHeight="10" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#a371f7"/></marker>
+          <filter id="glow" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <!-- INPUT: messy claim -->
+        <rect x="26" y="150" width="184" height="118" rx="12" class="d-box"/>
+        <text x="118" y="177" text-anchor="middle" class="d-t" font-size="15">📄 Messy claim</text>
+        <text x="118" y="197" text-anchor="middle" class="d-s" font-size="11.5">free text · PDF · email</text>
+        <g stroke="#3b4553" stroke-width="2.4"><line x1="52" y1="220" x2="184" y2="220"/><line x1="52" y1="236" x2="166" y2="236"/><line x1="52" y1="252" x2="184" y2="252"/></g>
+
+        <!-- input -> core (AI extract) -->
+        <path d="M210,209 H406" stroke="#a371f7" stroke-width="2.6" fill="none" marker-end="url(#ap)"/>
+        <rect x="252" y="192" width="112" height="30" rx="15" fill="#1a1526" stroke="#a371f7" stroke-width="1.4"/>
+        <text x="308" y="207" text-anchor="middle" fill="#c8a6ff" font-size="12.5" font-weight="700">✨ AI structures</text>
+
+        <!-- CORE (hero) -->
+        <rect x="414" y="104" width="298" height="212" rx="18" fill="#0e1a12" stroke="#3fb950" stroke-width="2.6" filter="url(#glow)"/>
+        <text x="563" y="134" text-anchor="middle" fill="#5bd67c" font-size="17" font-weight="800">🛡️ DETERMINISTIC CORE</text>
+        <text x="563" y="155" text-anchor="middle" class="d-s" font-size="11.5">reproducible · auditable · AI-free</text>
+        <rect x="436" y="170" width="254" height="34" rx="8" class="d-box"/><text x="563" y="187" text-anchor="middle" class="d-t" font-size="13">16 fraud rules → points</text>
+        <rect x="436" y="210" width="254" height="34" rx="8" class="d-box"/><text x="563" y="227" text-anchor="middle" class="d-t" font-size="13">score → band → routing</text>
+        <rect x="436" y="250" width="254" height="34" rx="8" class="d-box"/><text x="563" y="267" text-anchor="middle" class="d-t" font-size="13">fraud-ring detection</text>
+
+        <!-- core -> outputs (AI writes) -->
+        <path d="M712,209 H846" stroke="#a371f7" stroke-width="2.6" fill="none" marker-end="url(#ap)"/>
+        <rect x="716" y="192" width="96" height="30" rx="15" fill="#1a1526" stroke="#a371f7" stroke-width="1.4"/>
+        <text x="764" y="207" text-anchor="middle" fill="#c8a6ff" font-size="12.5" font-weight="700">✨ AI writes</text>
+
+        <!-- OUTPUTS -->
+        <rect x="852" y="146" width="184" height="40" rx="10" class="d-box"/><text x="872" y="167" text-anchor="start" class="d-t" font-size="13">🧠 Why-flagged note</text>
+        <rect x="852" y="190" width="184" height="40" rx="10" class="d-box"/><text x="872" y="211" text-anchor="start" class="d-t" font-size="13">🕸️ Ring summary</text>
+        <rect x="852" y="234" width="184" height="40" rx="10" class="d-box"/><text x="872" y="255" text-anchor="start" class="d-t" font-size="13">📝 SIU referral</text>
+
+        <!-- RULE LAB feedback loop -->
+        <rect x="360" y="360" width="400" height="60" rx="12" class="d-warn"/>
+        <text x="560" y="383" text-anchor="middle" class="d-t" font-size="14">🧪 Rule Lab</text>
+        <text x="560" y="403" text-anchor="middle" class="d-s" font-size="12">AI proposes a new rule → 👤 human reviews &amp; adopts</text>
+        <path d="M560,360 C560,338 560,330 563,318" stroke="#a371f7" stroke-width="2.2" fill="none" stroke-dasharray="6 4" marker-end="url(#ap)"/>
+        <text x="596" y="342" text-anchor="start" fill="#c8a6ff" font-size="11.5">grows the engine (still deterministic)</text>
+
+        <!-- legend -->
+        <rect x="26" y="360" width="14" height="14" rx="3" fill="#1a1526" stroke="#a371f7"/><text x="47" y="368" fill="#c8a6ff" font-size="12">AI · at the edges</text>
+        <rect x="26" y="384" width="14" height="14" rx="3" fill="#0e1a12" stroke="#3fb950"/><text x="47" y="392" fill="#5bd67c" font-size="12">deterministic · the core</text>
+      </svg>
+    </div>
+    <div style="text-align:center;margin-top:14px">
+      <span style="display:inline-block;background:linear-gradient(90deg,rgba(63,185,80,.20),rgba(88,166,255,.12));
+        border:1px solid rgba(63,185,80,.55);border-radius:26px;padding:9px 20px;
+        font-size:clamp(15px,1.8vw,21px);font-weight:800;color:#eafff0;box-shadow:0 0 20px rgba(63,185,80,.22)">
+        💵 $0 to run — local Ollama · no per-token fees · data never leaves your walls</span>
+    </div>
+    <p class="cap"><b>Messy → structured</b> going in, <b>structured → readable</b> coming out, and a <b>human-gated</b> way to grow the rules.
+      The score, band and ring in the middle are <b>never</b> AI-decided.</p>
+  </section>
+
+  <!-- 9 — COVERAGE -->
+  <section class="slide">
+    <div class="eyebrow">Scope coverage</div>
+    <h2>All 6 use cases · all 4 MVP items</h2>
+    <table>
+      <tr><th>Requirement</th><th>Delivered by</th><th></th></tr>
+      <tr><td>1 · Scoring at FNOL / intake</td><td>Live <code>POST /api/score</code> + in-UI console</td><td class="check">✓</td></tr>
+      <tr><td>2 · Anomaly: amount / timing / frequency</td><td>R7,R8 · R1,R2,R4,R6 · R5</td><td class="check">✓</td></tr>
+      <tr><td>3 · Entity linking (claimants / providers / addresses)</td><td>Shared-identifier graph + R5 / R13</td><td class="check">✓</td></tr>
+      <tr><td>4 · SIU prioritization</td><td>Ranked queue + band-driven routing</td><td class="check">✓</td></tr>
+      <tr><td>5 · Explanation layer</td><td>Per-rule reasons + narrative + additive score</td><td class="check">✓</td></tr>
+      <tr><td>6 · Fraud-ring detection</td><td>Connected-component network analysis</td><td class="check">✓</td></tr>
+      <tr><td class="muted">MVP · risk score · why-flagged · duplicate detection · ranked queue</td><td class="muted">All four, end-to-end</td><td class="check">✓✓✓✓</td></tr>
+    </table>
+    <p class="cap">Every row is backed by an automated conformance test — not just a claim in a slide.</p>
+  </section>
+
+  <!-- 10 — QUALITY -->
+  <section class="slide">
+    <div class="eyebrow">Quality</div>
+    <h2>Built to be trusted, not just demoed</h2>
+    <div class="stat">
+      <div><div class="s grad">103</div><div class="l">automated checks — all green</div></div>
+      <div><div class="s">16 × 3</div><div class="l">rules × positive / negative / boundary</div></div>
+      <div><div class="s">404 · 422</div><div class="l">API robustness covered</div></div>
+      <div><div class="s">0 FP</div><div class="l">clean controls stay clean</div></div>
+    </div>
+    <ul class="big" style="margin-top:16px">
+      <li>Every rule fires when it should — and <b>stays silent</b> when it shouldn't (boundary-exact: 29 vs 30, 59 vs 60).</li>
+      <li>Ring logic verified: distinct-claimant requirement, edge de-dup, same-claimant ≠ ring.</li>
+      <li>Score additivity asserted: <b>Σ points == score</b> on every claim.</li>
+    </ul>
+  </section>
+
+  <!-- 11 — STACK -->
+  <section class="slide">
+    <div class="eyebrow">Tech</div>
+    <h2>Boring where it counts, <span class="k">sharp</span> where it matters</h2>
+    <div class="diagram">
+      <svg viewBox="0 0 1040 296" role="img" aria-label="Technology stack — a claim flows down through it">
+        <defs>
+          <marker id="sa" markerWidth="9" markerHeight="9" refX="7" refY="3" orient="auto"><path d="M0,0 L7,3 L0,6 Z" fill="#a371f7"/></marker>
+          <linearGradient id="gL" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#1a2431"/><stop offset="1" stop-color="#10151d"/></linearGradient>
+          <linearGradient id="gCore" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#123023"/><stop offset="1" stop-color="#0e1a12"/></linearGradient>
+          <linearGradient id="gAI" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#231a33"/><stop offset="1" stop-color="#160f21"/></linearGradient>
+          <filter id="gl" x="-40%" y="-40%" width="180%" height="180%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+        </defs>
+
+        <!-- layers -->
+        <rect x="30" y="14"  width="700" height="54" rx="12" fill="url(#gL)" stroke="#2a3340" stroke-width="1.5"/>
+        <text x="54" y="35" class="d-t" font-size="15" text-anchor="start">🖥️  Presentation</text>
+        <text x="54" y="55" class="d-s" font-size="11.5" text-anchor="start">zero-build SPA · vanilla JS · force-graph · light/dark</text>
+        <text x="712" y="45" fill="#8ecbff" font-size="12" text-anchor="end" font-weight="700">the UI</text>
+
+        <rect x="30" y="76"  width="700" height="54" rx="12" fill="url(#gL)" stroke="#2a3340" stroke-width="1.5"/>
+        <text x="54" y="97" class="d-t" font-size="15" text-anchor="start">🔌  API</text>
+        <text x="54" y="117" class="d-s" font-size="11.5" text-anchor="start">FastAPI · Pydantic v2 · typed REST + JSON</text>
+        <text x="712" y="107" fill="#8ecbff" font-size="12" text-anchor="end" font-weight="700">the door</text>
+
+        <rect x="30" y="138" width="700" height="54" rx="12" fill="url(#gCore)" stroke="#3fb950" stroke-width="2.4" filter="url(#gl)"/>
+        <text x="54" y="159" fill="#eafff0" font-size="15" text-anchor="start" font-weight="800">🧠  Domain logic</text>
+        <text x="54" y="179" fill="#5bd67c" font-size="11.5" text-anchor="start">rule engine R1–R16 + graph — 100% reproducible</text>
+        <text x="712" y="169" fill="#5bd67c" font-size="12" text-anchor="end" font-weight="800">★ the differentiator</text>
+
+        <rect x="30" y="200" width="700" height="54" rx="12" fill="url(#gL)" stroke="#2a3340" stroke-width="1.5"/>
+        <text x="54" y="221" class="d-t" font-size="15" text-anchor="start">🗂️  Data</text>
+        <text x="54" y="241" class="d-s" font-size="11.5" text-anchor="start">claims.json · config.json — swap in real data, no code change</text>
+        <text x="712" y="231" fill="#8ecbff" font-size="12" text-anchor="end" font-weight="700">the fuel</text>
+
+        <!-- local AI branch: reads intake, writes notes/referral, AND (Rule Lab) proposes rules back into the core -->
+        <path d="M730,150 H792" stroke="#a371f7" stroke-width="2.2" fill="none" stroke-dasharray="5 4" marker-end="url(#sa)"/>
+        <text x="761" y="144" text-anchor="middle" fill="#8b949e" font-size="9">flags</text>
+        <path d="M792,182 H734" stroke="#a371f7" stroke-width="2" fill="none" stroke-dasharray="5 4" marker-end="url(#sa)"/>
+        <text x="761" y="198" text-anchor="middle" fill="#c8a6ff" font-size="9">🧪 new rules</text>
+        <rect x="798" y="118" width="212" height="90" rx="12" fill="url(#gAI)" stroke="#a371f7" stroke-width="1.8" filter="url(#gl)"/>
+        <text x="904" y="140" text-anchor="middle" fill="#e7dbff" font-size="13.5" font-weight="800">🤖 Local AI · at the edges</text>
+        <text x="904" y="160" text-anchor="middle" fill="#c8a6ff" font-size="10.5">📥 reads intake · 📝 notes · referral</text>
+        <text x="904" y="177" text-anchor="middle" fill="#e7dbff" font-size="10.5" font-weight="700">🧪 Rule Lab → proposes new rules</text>
+        <text x="904" y="194" text-anchor="middle" fill="#8b7bb0" font-size="9.5">Ollama qwen3 · human-adopted · offline</text>
+
+        <!-- a claim pulses DOWN through the stack -->
+        <circle r="7" fill="#58a6ff" filter="url(#gl)">
+          <animate attributeName="cy" values="41;103;165;227;41" dur="3.2s" repeatCount="indefinite" keyTimes="0;0.3;0.6;0.9;1"/>
+          <animate attributeName="cx" values="24;24;24;24;24" dur="3.2s" repeatCount="indefinite"/>
+          <animate attributeName="opacity" values="0;1;1;1;0" dur="3.2s" repeatCount="indefinite"/>
+        </circle>
+      </svg>
+    </div>
+
+    <div class="tstats">
+      <div class="tstat"><div class="b grad">⚡ instant</div><div class="l">scoring &amp; re-linking</div></div>
+      <div class="tstat"><div class="b" style="color:#5bd67c">103 ✓</div><div class="l">automated tests, all green</div></div>
+      <div class="tstat"><div class="b">~1,300</div><div class="l">lines · 4 runtime deps</div></div>
+      <div class="tstat" style="border-color:rgba(63,185,80,.6);background:linear-gradient(180deg,#12241a,#0f1c14);box-shadow:0 0 18px rgba(63,185,80,.28)"><div class="b" style="color:#5bd67c">💵 $0 AI</div><div class="l">local Ollama · no per-token fees</div></div>
+    </div>
+    <p class="cap">A claim falls <b>down the stack</b> to the deterministic core. <b>Local AI</b> hangs off the side — it reads messy intake,
+      writes the notes &amp; SIU referral, and via <b>🧪 Rule Lab</b> even <b>proposes new rules</b> for a human to adopt into the core.</p>
+  </section>
+
+  <!-- 12 — ROADMAP + CLOSE -->
+  <section class="slide">
+    <div class="eyebrow">Roadmap · thank you</div>
+    <h2 style="margin-bottom:4px">Team <span class="grad">Overwatch</span></h2>
+    <p class="closeline"><span class="grad">Catch the whole ring — and prove it.</span></p>
+
+    <div class="diagram" style="margin-top:18px">
+      <svg viewBox="0 0 1040 200" role="img" aria-label="Product roadmap timeline">
+        <!-- spine -->
+        <line x1="70" y1="96" x2="970" y2="96" stroke="#2a3340" stroke-width="3"/>
+        <line x1="70" y1="96" x2="210" y2="96" stroke="#3fb950" stroke-width="4"/>
+        <!-- NOW -->
+        <circle cx="210" cy="96" r="13" fill="#132018" stroke="#3fb950" stroke-width="3"/>
+        <text x="210" y="96" text-anchor="middle" fill="#5bd67c" font-size="13" font-weight="800">✓</text>
+        <text x="210" y="46" text-anchor="middle" fill="#5bd67c" font-size="15" font-weight="800">NOW · shipped</text>
+        <text x="210" y="132" text-anchor="middle" class="d-s" font-size="12">Explainable engine · rings</text>
+        <text x="210" y="150" text-anchor="middle" class="d-s" font-size="12">live FNOL · 103 tests green</text>
+        <!-- NEXT -->
+        <circle cx="540" cy="96" r="12" fill="#0f1a27" stroke="#58a6ff" stroke-width="3"/>
+        <text x="540" y="46" text-anchor="middle" fill="#8ecbff" font-size="15" font-weight="800">NEXT</text>
+        <text x="540" y="132" text-anchor="middle" class="d-s" font-size="12">Real media forensics</text>
+        <text x="540" y="150" text-anchor="middle" class="d-s" font-size="12">EXIF / pHash on uploads</text>
+        <!-- LATER -->
+        <circle cx="870" cy="96" r="12" fill="#1a1526" stroke="#a371f7" stroke-width="3"/>
+        <text x="870" y="46" text-anchor="middle" fill="#c8a6ff" font-size="15" font-weight="800">LATER</text>
+        <text x="870" y="132" text-anchor="middle" class="d-s" font-size="12">Official #12 / #48 dataset</text>
+        <text x="870" y="150" text-anchor="middle" class="d-s" font-size="12">scale to the full book</text>
+        <!-- you-are-here -->
+        <text x="210" y="184" text-anchor="middle" fill="#5bd67c" font-size="11.5" font-weight="700">▲ you are here</text>
+      </svg>
+    </div>
+
+    <div class="pillars">
+      <div class="pillar"><div class="i">🔍</div><b>Explainable</b><span>every point → a named rule</span></div>
+      <div class="pillar"><div class="i">🕸️</div><b>Network-aware</b><span>catches organised rings</span></div>
+      <div class="pillar"><div class="i">🗂️</div><b>Dataset-driven</b><span>swap in real data, no code</span></div>
+      <div class="pillar"><div class="i">🔌</div><b>Offline-safe</b><span>no key required to run</span></div>
+    </div>
+
+    <p class="foot" style="text-align:center;margin-top:20px">Live demo → <span class="kbd">http://localhost:8000</span>
+      &nbsp;·&nbsp; deck → <span class="kbd">/deck</span> &nbsp;·&nbsp; <b class="check">103 / 103</b> tests green</p>
+  </section>
+
+</div>
+
+<div id="dots"></div>
+<div id="count"></div>
+<div id="hint"><span class="kbd">←</span> <span class="kbd">→</span> navigate · <span class="kbd">F</span> fullscreen</div>
+
+<script>
+// ---- rule data for slide 5 --------------------------------------------------
+const RULES = [
+  ["R1","Just-in-time cover",15,"id"],["R2","Reinstated pre-loss",10,"id"],
+  ["R3","Address mismatch",8,"id"],["R4","Late report",8,"tf"],
+  ["R5","Serial claimant",12,"tf"],["R6","Weak-witness timing",5,"tf"],
+  ["R7","Above 90th pct amount",10,"am"],["R8","Threshold gaming",12,"am"],
+  ["R9","Fabricated invoices",8,"be"],["R10","Fast cash, no inspect",10,"be"],
+  ["R11","No police report",7,"be"],["R12","Shared-identifier ring",15,"nw"],
+  ["R13","Flagged repairer",10,"nw"],["R14","Doc inconsistency",10,"dt"],
+  ["R15","Duplicate photo",15,"dt"],["R16","EXIF mismatch",8,"dt"],
+];
+document.getElementById('ruleGrid').innerHTML = RULES.map(([id,d,p,c])=>
+  `<div class="rule cat-${c}"><span class="id">${id}</span><span class="pts">+${p}</span>
+   <div class="d">${d}</div></div>`).join('');
+
+// ---- deck engine ------------------------------------------------------------
+const slides = [...document.querySelectorAll('.slide')];
+const dots = document.getElementById('dots');
+slides.forEach((_,i)=>{ const b=document.createElement('b'); b.onclick=()=>go(i); dots.appendChild(b); });
+let cur = 0;
+function go(i){
+  cur = Math.max(0, Math.min(slides.length-1, i));
+  slides.forEach((s,k)=>s.classList.toggle('on', k===cur));
+  [...dots.children].forEach((d,k)=>d.classList.toggle('on', k===cur));
+  document.getElementById('bar').style.width = ((cur+1)/slides.length*100)+'%';
+  document.getElementById('count').textContent = `${cur+1} / ${slides.length}`;
+}
+function next(){ go(cur+1); } function prev(){ go(cur-1); }
+document.addEventListener('keydown', e=>{
+  if(['ArrowRight',' ','PageDown','Enter'].includes(e.key)){ e.preventDefault(); next(); }
+  else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); prev(); }
+  else if(e.key==='Home'){ go(0); } else if(e.key==='End'){ go(slides.length-1); }
+  else if(e.key.toLowerCase()==='f'){
+    document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen();
+  }
+});
+document.getElementById('stage').addEventListener('click', e=>{
+  if(e.target.closest('#dots')) return;
+  (e.clientX > window.innerWidth/2) ? next() : prev();
+});
+go(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,15 @@
+{
+  "auto_approval_threshold": {
+    "windshield": 5000.0,
+    "water_damage": 5000.0,
+    "auto_theft": 25000.0
+  },
+  "flagged_repairers": {
+    "QuickFix Auto Body": "3 prior SIU referrals; loss ratio 2.1x peer shops"
+  },
+  "police_report_required": [
+    "auto_theft",
+    "burglary",
+    "third_party_injury"
+  ]
+}
