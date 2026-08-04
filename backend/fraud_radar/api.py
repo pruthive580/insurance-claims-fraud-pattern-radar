@@ -2,7 +2,6 @@
 
 Endpoints:
   GET  /                  -> the single-page dashboard
-  GET  /deck              -> the pitch deck
   GET  /api/health        -> LLM/offline status + counts
   GET  /api/claims        -> scored claim summaries (sorted by risk)
   GET  /api/claims/{id}   -> full detail: fired rules, narrative, raw claim
@@ -110,12 +109,6 @@ _NOCACHE = {"Cache-Control": "no-store, max-age=0"}
 @app.get("/")
 def index():
     return FileResponse(_WEB / "index.html", headers=_NOCACHE)
-
-
-@app.get("/deck")
-def deck():
-    """The pitch deck — present straight from the app at /deck."""
-    return FileResponse(_WEB / "presentation.html", headers=_NOCACHE)
 
 
 @app.get("/arch")

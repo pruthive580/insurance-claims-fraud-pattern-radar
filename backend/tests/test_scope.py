@@ -1,4 +1,4 @@
-"""Strict conformance tests for hackathon use case #12.
+"""Strict conformance tests for the Fraud Pattern Radar engine and API.
 
 Maps every official requirement (6 Use Cases + 4 MVP items) to concrete
 assertions against BOTH the engine (unit) and the live API (integration).

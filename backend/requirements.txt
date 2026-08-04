@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+
+# Optional — enables Anthropic-backed narratives.
+# Ollama is used by default; without any provider the app falls back to
+# deterministic templates (scores are unaffected).
+# anthropic

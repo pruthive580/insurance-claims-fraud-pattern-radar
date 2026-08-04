@@ -5,3 +5,4 @@ __pycache__/
 .pytest_cache/
 .DS_Store
 *.egg-info/
+backend/fraud_radar/data/runtime_claims.json
